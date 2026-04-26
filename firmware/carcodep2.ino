@@ -1,7 +1,7 @@
 /*************************************************************
   HAZARD RECON — GLOBAL NEURAL OS FIRMWARE (BLYNK VERSION)
   
-  Updated with Slide Command Support (SL/SR)
+  Slide Commands (SL/SR) Removed
  *************************************************************/
 
 #define BLYNK_TEMPLATE_ID "TMPL3UCNsNTD2"
@@ -33,8 +33,6 @@ BLYNK_WRITE(V0) {
   else if (cmd == "B") moveBackward();
   else if (cmd == "L") turnLeft();
   else if (cmd == "R") turnRight();
-  else if (cmd == "SL") turnLeft();  // Slide Left
-  else if (cmd == "SR") turnRight(); // Slide Right
   else stopCar();
 }
 
