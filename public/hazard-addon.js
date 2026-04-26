@@ -231,7 +231,7 @@
     root.querySelector("#hz-last").textContent = fmtAgo(state.lastOk);
     root.querySelector("#hz-fail").textContent = state.consecutiveFails;
     root.querySelector("#hz-count").textContent = state.log.length;
-    root.querySelector("#hz-ip").textContent = ip ? "car: " + ip : "car: not configured (open Settings)";
+    root.querySelector("#hz-ip").textContent = ip ? "car: " + ip : "car: not configured (tap ⚙ IP)";
   }
 
   async function poll() {
