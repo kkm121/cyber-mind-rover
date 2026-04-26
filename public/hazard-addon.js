@@ -108,6 +108,8 @@
   function $(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
   function injectStyles() { const s = document.createElement("style"); s.textContent = STYLE; document.head.appendChild(s); }
 
+  const DEFAULT_CAR_URL = "http://hazardrecon.local";
+
   function getCarIp() {
     const keys = ["carIp", "car_ip", "CAR_IP", "hazardCarIp", "settings.carIp"];
     for (const k of keys) { const v = localStorage.getItem(k); if (v) return v.replace(/\/+$/, ""); }
@@ -115,11 +117,12 @@
       const raw = localStorage.getItem("settings") || localStorage.getItem("hazardSettings");
       if (raw) { const o = JSON.parse(raw); if (o && (o.carIp || o.ip)) return (o.carIp || o.ip).replace(/\/+$/, ""); }
     } catch (_) {}
-    return null;
+    return DEFAULT_CAR_URL;
   }
   function setCarIp(v) {
     let val = (v || "").trim().replace(/\/+$/, "");
-    if (val && !/^https?:\/\//i.test(val)) val = "http://" + val;
+    if (!val) val = DEFAULT_CAR_URL;
+    if (!/^https?:\/\//i.test(val)) val = "http://" + val;
     localStorage.setItem("carIp", val);
     return val;
   }
@@ -136,8 +139,9 @@
           const hwPaths = ["/data", "/cmd", "/move", "/stop", "/forward", "/backward", "/left", "/right", "/status"];
           if (ip && hwPaths.some(p => url === p || url.startsWith(p + "?") || url.startsWith(p + "/"))) {
             const newUrl = ip + url;
-            if (typeof input === "string") return orig(newUrl, init);
-            return orig(new Request(newUrl, input), init);
+            const newInit = Object.assign({ mode: "cors", cache: "no-store" }, init || {});
+            if (typeof input === "string") return orig(newUrl, newInit);
+            return orig(new Request(newUrl, input), newInit);
           }
         }
       } catch (_) {}
