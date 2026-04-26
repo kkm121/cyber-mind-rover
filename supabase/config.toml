@@ -1,0 +1,4 @@
+project_id = "roqrldfcfkczxxhpoztv"
+
+[functions.neural-chat]
+verify_jwt = false
