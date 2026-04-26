@@ -1,7 +1,7 @@
 /*************************************************************
   HAZARD RECON — GLOBAL NEURAL OS FIRMWARE (BLYNK VERSION)
   
-  Slide Commands (SL/SR) Removed
+  Added RSSI (Signal Strength) Tracking
  *************************************************************/
 
 #define BLYNK_TEMPLATE_ID "TMPL3UCNsNTD2"
@@ -53,10 +53,15 @@ void loop() {
     float h = dht.readHumidity();
     int rawADC = analogRead(MQ_PIN);
     int ppm = 300 + (pow(rawADC, 2) / 150.0);
+    
+    // Get WiFi Signal Strength (RSSI)
+    long rssi = WiFi.RSSI();
+    
     if (!isnan(t)) {
       Blynk.virtualWrite(V1, t);
       Blynk.virtualWrite(V2, h);
       Blynk.virtualWrite(V3, ppm);
+      Blynk.virtualWrite(V4, rssi); // Send RSSI to V4
     }
   }
 }
