@@ -845,6 +845,7 @@
         <a class="nav-link" onclick="navTo(1)">PHYSICS LAB</a>
         <a class="nav-link" onclick="navTo(2)">HUD</a>
         <a class="nav-link" onclick="navTo(3)">COMMAND CENTER</a>
+        <a class="nav-link" onclick="openSettings()" style="color: #ff007f; opacity: 1;">⚙ TOKEN</a>
     </nav>
 
     <!-- SCROLL CONTAINER -->
@@ -1567,9 +1568,17 @@
                                     el.click();
                                 }
                             } else {
-                                // Continue Dragging
+                                // Continue Dragging (Special handling for sliders)
                                 if (el) {
                                     el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
+                                    
+                                    if (el.tagName === 'INPUT' && el.type === 'range') {
+                                        const rect = el.getBoundingClientRect();
+                                        const percent = Math.min(Math.max((x - rect.left) / rect.width, 0), 1);
+                                        const val = parseFloat(el.min) + percent * (parseFloat(el.max) - parseFloat(el.min));
+                                        el.value = val;
+                                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
                                 }
                             }
                         } else {
