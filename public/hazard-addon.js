@@ -108,6 +108,8 @@
   function $(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
   function injectStyles() { const s = document.createElement("style"); s.textContent = STYLE; document.head.appendChild(s); }
 
+  const DEFAULT_CAR_URL = "http://hazardrecon.local";
+
   function getCarIp() {
     const keys = ["carIp", "car_ip", "CAR_IP", "hazardCarIp", "settings.carIp"];
     for (const k of keys) { const v = localStorage.getItem(k); if (v) return v.replace(/\/+$/, ""); }
@@ -115,11 +117,12 @@
       const raw = localStorage.getItem("settings") || localStorage.getItem("hazardSettings");
       if (raw) { const o = JSON.parse(raw); if (o && (o.carIp || o.ip)) return (o.carIp || o.ip).replace(/\/+$/, ""); }
     } catch (_) {}
-    return null;
+    return DEFAULT_CAR_URL;
   }
   function setCarIp(v) {
     let val = (v || "").trim().replace(/\/+$/, "");
-    if (val && !/^https?:\/\//i.test(val)) val = "http://" + val;
+    if (!val) val = DEFAULT_CAR_URL;
+    if (!/^https?:\/\//i.test(val)) val = "http://" + val;
     localStorage.setItem("carIp", val);
     return val;
   }
@@ -136,8 +139,9 @@
           const hwPaths = ["/data", "/cmd", "/move", "/stop", "/forward", "/backward", "/left", "/right", "/status"];
           if (ip && hwPaths.some(p => url === p || url.startsWith(p + "?") || url.startsWith(p + "/"))) {
             const newUrl = ip + url;
-            if (typeof input === "string") return orig(newUrl, init);
-            return orig(new Request(newUrl, input), init);
+            const newInit = Object.assign({ mode: "cors", cache: "no-store" }, init || {});
+            if (typeof input === "string") return orig(newUrl, newInit);
+            return orig(new Request(newUrl, input), newInit);
           }
         }
       } catch (_) {}
@@ -181,14 +185,15 @@
     <div id="hz-modal-bg" role="dialog" aria-modal="true" aria-labelledby="hz-modal-title">
       <div id="hz-modal">
         <h3 id="hz-modal-title">Car Connection</h3>
-        <p>Enter the local IP address of your Hazard Recon Car. The dashboard will route all hardware requests (/data, /cmd, etc.) through this address.</p>
-        <label for="hz-modal-input">Car Local IP Address</label>
-        <input id="hz-modal-input" type="text" placeholder="http://192.168.43.50" autocomplete="off" spellcheck="false" />
+        <p>Default address is <code style="color:#00f0ff">http://hazardrecon.local</code> — your car must be on the same Wi-Fi network and advertising mDNS as <code>hazardrecon.local</code>. Override with a raw IP only if mDNS isn't working.</p>
+        <label for="hz-modal-input">Car Address (mDNS or IP)</label>
+        <input id="hz-modal-input" type="text" placeholder="http://hazardrecon.local" autocomplete="off" spellcheck="false" />
         <div class="hz-modal-actions">
           <button id="hz-modal-cancel" type="button">Cancel</button>
+          <button id="hz-modal-reset" type="button">Reset Default</button>
           <button id="hz-modal-save" type="button" class="primary">Save & Connect</button>
         </div>
-        <small>Tip: include the protocol, e.g. <code>http://192.168.1.42</code>. Stored locally in your browser.</small>
+        <small>The car firmware must send <code>Access-Control-Allow-Origin: *</code> on its responses so this dashboard can read them cross-origin.</small>
       </div>
     </div>
   `);
@@ -333,12 +338,12 @@
       render();
       poll();
     });
+    modal.querySelector("#hz-modal-reset").addEventListener("click", () => {
+      modal.querySelector("#hz-modal-input").value = DEFAULT_CAR_URL;
+    });
     modal.querySelector("#hz-modal-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter") modal.querySelector("#hz-modal-save").click();
     });
-
-    // Auto-open on first visit if no IP configured
-    if (!getCarIp()) setTimeout(openModal, 400);
 
     render();
     setInterval(poll, state.pollMs);
