@@ -1574,25 +1574,39 @@
                     const thumbOut = pinchDist > 0.15;
 
                     if (controlMode === 'manual') {
-                        // Show cursor whenever ANY hand is detected in manual mode
                         if (handCursor) {
                             handCursor.style.display = "flex";
                             handCursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
                         }
 
-                        if (fingersUp === 1 && indexUp && pinchDist < 0.05) {
+                        // Pinch detection (relaxed threshold for easier triggering)
+                        const isPinchingNow = pinchDist < 0.06;
+
+                        if (isPinchingNow) {
                             if (handCursor) handCursor.classList.add('pinching');
+                            
+                            const el = document.elementFromPoint(x, y);
+                            
                             if (!isPinching) {
                                 isPinching = true;
-                                const el = document.elementFromPoint(x, y);
-                                if (el) { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.click(); }
+                                // Start Drag / Click
+                                if (el) {
+                                    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }));
+                                    el.click();
+                                }
+                            } else {
+                                // Continue Dragging
+                                if (el) {
+                                    el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
+                                }
                             }
                         } else {
                             if (handCursor) handCursor.classList.remove('pinching');
                             if (isPinching) {
                                 isPinching = false;
+                                // End Drag
                                 const el = document.elementFromPoint(x, y);
-                                if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                                if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: x, clientY: y }));
                             }
                         }
                     }
