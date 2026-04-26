@@ -872,13 +872,10 @@
                         <div class="badge-dot"></div> DHT: WAITING
                     </div>
                     <div class="badge" id="mq-badge">
-                        <div class="badge-dot"></div> MQ: WAITING
+                        <div class="badge-dot"></div> MQ9: WAITING
                     </div>
                     <div class="badge" id="latency-badge" style="border-color: #00d4ff;">
                         <div class="badge-dot" style="background: #00d4ff; box-shadow: 0 0 15px #00d4ff;"></div> PING: --ms
-                    </div>
-                    <div class="badge" id="signal-badge" style="border-color: #ff007f;">
-                        <div class="badge-dot" style="background: #ff007f; box-shadow: 0 0 15px #ff007f;"></div> SIGNAL: --%
                     </div>
                 </div>
                 <div><button onclick="navTo(3)" class="cmd-btn">OPEN COMMAND CENTER</button></div>
@@ -1789,10 +1786,16 @@
             const lBadge = document.getElementById('latency-badge');
             if (lBadge) lBadge.innerHTML = `<div class="badge-dot" style="background: ${latency < 200 ? '#10b981' : '#f59e0b'}; box-shadow: 0 0 15px ${latency < 200 ? '#10b981' : '#f59e0b'};"></div> PING: ${latency}ms`;
             
-            const sBadge = document.getElementById('signal-badge');
-            if (sBadge && rssi !== undefined) {
-                const signalPercent = Math.min(Math.max(2 * (rssi + 100), 0), 100);
-                sBadge.innerHTML = `<div class="badge-dot" style="background: ${signalPercent > 50 ? '#10b981' : '#ef4444'}; box-shadow: 0 0 15px ${signalPercent > 50 ? '#10b981' : '#ef4444'};"></div> SIGNAL: ${signalPercent}%`;
+            const dBadge = document.getElementById('dht-badge');
+            if (dBadge) {
+                if (err) dBadge.innerHTML = `<div class="badge-dot" style="background: #ef4444; box-shadow: 0 0 15px #ef4444;"></div> DHT: ERROR`;
+                else dBadge.innerHTML = `<div class="badge-dot"></div> DHT: ONLINE`;
+            }
+
+            const mBadge = document.getElementById('mq-badge');
+            if (mBadge) {
+                if (g > 0) mBadge.innerHTML = `<div class="badge-dot"></div> MQ9: ONLINE`;
+                else mBadge.innerHTML = `<div class="badge-dot" style="background: #f59e0b; box-shadow: 0 0 15px #f59e0b;"></div> MQ9: WAITING`;
             }
 
             if (tChart) {
