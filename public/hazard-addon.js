@@ -338,12 +338,12 @@
       render();
       poll();
     });
+    modal.querySelector("#hz-modal-reset").addEventListener("click", () => {
+      modal.querySelector("#hz-modal-input").value = DEFAULT_CAR_URL;
+    });
     modal.querySelector("#hz-modal-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter") modal.querySelector("#hz-modal-save").click();
     });
-
-    // Auto-open on first visit if no IP configured
-    if (!getCarIp()) setTimeout(openModal, 400);
 
     render();
     setInterval(poll, state.pollMs);
