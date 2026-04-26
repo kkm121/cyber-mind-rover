@@ -85,6 +85,33 @@
     } catch (_) {}
     return null;
   }
+  function setCarIp(v) {
+    let val = (v || "").trim().replace(/\/+$/, "");
+    if (val && !/^https?:\/\//i.test(val)) val = "http://" + val;
+    localStorage.setItem("carIp", val);
+    return val;
+  }
+
+  // Patch fetch so existing app.html calls like fetch('/data') get rewritten to the car IP.
+  (function patchFetch() {
+    const orig = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      try {
+        const url = typeof input === "string" ? input : (input && input.url) || "";
+        if (url && url.startsWith("/") && !url.startsWith("//")) {
+          const ip = getCarIp();
+          // Don't rewrite app routes — only the hardware endpoints the firmware exposes.
+          const hwPaths = ["/data", "/cmd", "/move", "/stop", "/forward", "/backward", "/left", "/right", "/status"];
+          if (ip && hwPaths.some(p => url === p || url.startsWith(p + "?") || url.startsWith(p + "/"))) {
+            const newUrl = ip + url;
+            if (typeof input === "string") return orig(newUrl, init);
+            return orig(new Request(newUrl, input), init);
+          }
+        }
+      } catch (_) {}
+      return orig(input, init);
+    };
+  })();
 
   const state = {
     log: [], maxLog: 5000,
