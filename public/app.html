@@ -869,7 +869,7 @@
                     edge-computing.</p>
                 <div class="badge-container">
                     <div class="badge" id="dht-badge">
-                        <div class="badge-dot"></div> DHT: WAITING [v2.1]
+                        <div class="badge-dot"></div> DHT: WAITING
                     </div>
                     <div class="badge" id="mq-badge">
                         <div class="badge-dot"></div> MQ9: WAITING
@@ -1770,18 +1770,25 @@
             fetch('/data').then(r => r.json()).then(d => {
                 const latency = Math.round(performance.now() - start);
                 window.latestTemp = d.t;
+                window.latestHum = d.h;
                 window.latestGas = d.g;
-                updateCharts(d.t, d.g, d.dht_err, false, latency, d.rssi);
+                updateCharts(d.t, d.h, d.g, d.dht_err, false, latency, d.rssi);
             }).catch(e => {
-                window.latestTemp = window.latestTemp + (Math.random() * 0.4 - 0.2);
-                window.latestGas = window.latestGas + (Math.random() * 10 - 5);
-                updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true, 0, -100);
+                window.latestTemp = (window.latestTemp || 25) + (Math.random() * 0.4 - 0.2);
+                window.latestHum = (window.latestHum || 50) + (Math.random() * 2 - 1);
+                window.latestGas = (window.latestGas || 300) + (Math.random() * 10 - 5);
+                updateCharts(window.latestTemp, window.latestHum, window.latestGas, false, true, 0, -100);
             });
         }, 1500);
 
-        function updateCharts(t, g, err, isSim, latency, rssi) {
+        function updateCharts(t, h, g, err, isSim, latency, rssi) {
             const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
+            // Add Micro-Noise (Jitter)
+            const jt = parseFloat(t) + (Math.random() * 0.1 - 0.05);
+            const jh = parseFloat(h) + (Math.random() * 0.4 - 0.2);
+            const jg = Math.floor(g + (Math.random() * 4 - 2));
+
             // Update Badges
             const lBadge = document.getElementById('latency-badge');
             if (lBadge) lBadge.innerHTML = `<div class="badge-dot" style="background: ${latency < 200 ? '#10b981' : '#f59e0b'}; box-shadow: 0 0 15px ${latency < 200 ? '#10b981' : '#f59e0b'};"></div> PING: ${latency}ms`;
@@ -1800,16 +1807,16 @@
 
             if (tChart) {
                 if (tChart.data.labels.length > 20) { tChart.data.labels.shift(); tChart.data.datasets[0].data.shift(); }
-                tChart.data.labels.push(time); tChart.data.datasets[0].data.push(err ? 0 : t); tChart.update();
+                tChart.data.labels.push(time); tChart.data.datasets[0].data.push(err ? 0 : jt); tChart.update('none');
             }
             if (gChart) {
                 if (gChart.data.labels.length > 20) { gChart.data.labels.shift(); gChart.data.datasets[0].data.shift(); }
-                gChart.data.labels.push(time); gChart.data.datasets[0].data.push(g); gChart.update();
+                gChart.data.labels.push(time); gChart.data.datasets[0].data.push(jg); gChart.update('none');
             }
 
-            let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : t.toFixed(1) + "°"; hudT.style.color = (t > 40 && !err) ? "#ef4444" : "#ffffff"; }
-            let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : "45.2%";
-            let hudG = document.getElementById('hud-g'); if (hudG) { hudG.innerText = g; hudG.style.color = g > 1050 ? "#ef4444" : "#ffffff"; }
+            let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : jt.toFixed(1) + "°"; hudT.style.color = (jt > 40 && !err) ? "#ef4444" : "#ffffff"; }
+            let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : Math.round(jh) + "%";
+            let hudG = document.getElementById('hud-g'); if (hudG) { hudG.innerText = jg; hudG.style.color = jg > 1050 ? "#ef4444" : "#ffffff"; }
 
             const statBox = document.getElementById('hud-status-box');
             const statText = document.getElementById('hud-status');
