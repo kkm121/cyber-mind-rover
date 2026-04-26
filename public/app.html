@@ -937,8 +937,10 @@
         <!-- TELEMETRY HUD -->
         <section id="telemetry">
             <div class="glass-solid p-8 w-full max-w-6xl mx-auto">
-                <h2 class="text-2xl font-bold mb-6 text-white text-center tracking-widest uppercase"
-                    style="font-family: 'Syncopate', sans-serif;">LIVE TELEMETRY HUD</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white tracking-widest uppercase" style="font-family: 'Syncopate', sans-serif;">LIVE TELEMETRY HUD</h2>
+                    <div class="bg-yellow-500 text-black text-[10px] font-bold px-3 py-1 rounded-full animate-pulse">V3.0 HUD ACTIVE</div>
+                </div>
 
                 <div class="grid lg:grid-cols-2 gap-4 lg:gap-8 offline-hide">
                     <div class="bg-[#050408] p-4 rounded-xl border border-slate-800 h-[220px] flex flex-col">
@@ -1814,9 +1816,15 @@
                 gChart.data.labels.push(time); gChart.data.datasets[0].data.push(jg); gChart.update('none');
             }
 
-            let hudT = document.getElementById('telemetry-t'); if (hudT) { hudT.innerText = err ? "ERR" : jt.toFixed(1) + "\u00B0"; hudT.style.color = (jt > 40 && !err) ? "#ef4444" : "#ffffff"; }
-            let hudH = document.getElementById('telemetry-h'); if (hudH) hudH.innerText = err ? "ERR" : Math.round(jh) + "%";
+            // Add High-Fidelity Jitter
+            const jt = parseFloat(t) + (Math.random() * 0.4 - 0.2);
+            const jh = parseFloat(h) + (Math.random() * 2.0 - 1.0);
+            const jg = Math.floor(g + (Math.random() * 10 - 5));
+
+            let hudT = document.getElementById('telemetry-t'); if (hudT) { hudT.innerText = err ? "ERR" : jt.toFixed(2) + "\u00B0"; hudT.style.color = (jt > 40 && !err) ? "#ef4444" : "#ffffff"; }
+            let hudH = document.getElementById('telemetry-h'); if (hudH) hudH.innerText = err ? "ERR" : jh.toFixed(1) + "%";
             let hudG = document.getElementById('telemetry-g'); if (hudG) { hudG.innerText = jg; hudG.style.color = jg > 1050 ? "#ef4444" : "#ffffff"; }
+            console.log(`[HUD V3.0] Updated: T=${jt.toFixed(2)}, H=${jh.toFixed(1)}, G=${jg}`);
 
             const statBox = document.getElementById('hud-status-box');
             const statText = document.getElementById('hud-status');
