@@ -290,21 +290,55 @@
     root.querySelector("#hz-trigger").setAttribute("aria-expanded", String(open));
   }
 
+  function openModal() {
+    const input = modal.querySelector("#hz-modal-input");
+    input.value = getCarIp() || "";
+    modal.classList.add("open");
+    setTimeout(() => input.focus(), 50);
+  }
+  function closeModal() { modal.classList.remove("open"); }
+
   function boot() {
     injectStyles();
     document.body.appendChild(root);
+    document.body.appendChild(modal);
 
     root.querySelector("#hz-trigger").addEventListener("click", (e) => {
       e.stopPropagation();
       setOpen(!state.open);
     });
+    root.querySelector("#hz-ipbtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      openModal();
+    });
     root.querySelector("#hz-panel").addEventListener("click", (e) => e.stopPropagation());
     document.addEventListener("click", () => { if (state.open) setOpen(false); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.open) setOpen(false); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (modal.classList.contains("open")) closeModal();
+        else if (state.open) setOpen(false);
+      }
+    });
 
     root.querySelector("#hz-csv").addEventListener("click", exportCSV);
     root.querySelector("#hz-json").addEventListener("click", exportJSON);
     root.querySelector("#hz-clear").addEventListener("click", clearLog);
+
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    modal.querySelector("#hz-modal-cancel").addEventListener("click", closeModal);
+    modal.querySelector("#hz-modal-save").addEventListener("click", () => {
+      const v = modal.querySelector("#hz-modal-input").value;
+      setCarIp(v);
+      closeModal();
+      render();
+      poll();
+    });
+    modal.querySelector("#hz-modal-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") modal.querySelector("#hz-modal-save").click();
+    });
+
+    // Auto-open on first visit if no IP configured
+    if (!getCarIp()) setTimeout(openModal, 400);
 
     render();
     setInterval(poll, state.pollMs);
