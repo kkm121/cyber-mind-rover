@@ -159,6 +159,7 @@
         <span class="hz-lat" id="hz-trig-lat">—</span>
         <span class="hz-caret">▾</span>
       </button>
+      <button id="hz-ipbtn" type="button" title="Configure Car IP">⚙ IP</button>
       <section id="hz-panel" role="menu">
         <h4>Link Status</h4>
         <div class="hz-row"><span class="hz-label">Status</span><span class="hz-val err" id="hz-status">offline</span></div>
@@ -173,6 +174,22 @@
         </div>
         <footer id="hz-ip">car: not configured</footer>
       </section>
+    </div>
+  `);
+
+  const modal = $(`
+    <div id="hz-modal-bg" role="dialog" aria-modal="true" aria-labelledby="hz-modal-title">
+      <div id="hz-modal">
+        <h3 id="hz-modal-title">Car Connection</h3>
+        <p>Enter the local IP address of your Hazard Recon Car. The dashboard will route all hardware requests (/data, /cmd, etc.) through this address.</p>
+        <label for="hz-modal-input">Car Local IP Address</label>
+        <input id="hz-modal-input" type="text" placeholder="http://192.168.43.50" autocomplete="off" spellcheck="false" />
+        <div class="hz-modal-actions">
+          <button id="hz-modal-cancel" type="button">Cancel</button>
+          <button id="hz-modal-save" type="button" class="primary">Save & Connect</button>
+        </div>
+        <small>Tip: include the protocol, e.g. <code>http://192.168.1.42</code>. Stored locally in your browser.</small>
+      </div>
     </div>
   `);
 
