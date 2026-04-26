@@ -991,15 +991,8 @@
                     <div
                         class="bg-[#050408] p-6 rounded-3xl border border-slate-800 flex flex-col justify-center relative shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                         <div class="d-pad mb-4 relative z-10">
-                            <!-- Top Row: Slide L, Forward, Slide R -->
-                            <div class="ctrl-btn slide-left" onmousedown="sendCmd('SL', 'SLIDE LEFT')"
-                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
-                                ontouchstart="sendCmd('SL', 'SLIDE LEFT')" ontouchend="sendCmd('S', 'STOP')"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path d="M11 17l-5-5 5-5" />
-                                    <path d="M18 17l-5-5 5-5" />
-                                </svg></div>
+                            <!-- Top Row: (empty), Forward, (empty) -->
+                            <div></div>
                             <div class="ctrl-btn up" onmousedown="sendCmd('F', 'FORWARD')"
                                 onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
                                 ontouchstart="sendCmd('F', 'FORWARD')" ontouchend="sendCmd('S', 'STOP')"><svg
@@ -1007,14 +1000,7 @@
                                     stroke-linejoin="round">
                                     <path d="M18 15l-6-6-6 6" />
                                 </svg></div>
-                            <div class="ctrl-btn slide-right" onmousedown="sendCmd('SR', 'SLIDE RIGHT')"
-                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
-                                ontouchstart="sendCmd('SR', 'SLIDE RIGHT')" ontouchend="sendCmd('S', 'STOP')"><svg
-                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path d="M13 17l5-5-5-5" />
-                                    <path d="M6 17l5-5-5-5" />
-                                </svg></div>
+                            <div></div>
 
                             <!-- Middle Row: Turn L, Stop, Turn R -->
                             <div class="ctrl-btn left" onmousedown="sendCmd('L', 'TURN LEFT')"
