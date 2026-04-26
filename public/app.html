@@ -1771,10 +1771,20 @@
             const start = performance.now();
             fetch('/data').then(r => r.json()).then(d => {
                 const latency = Math.round(performance.now() - start);
-                window.latestTemp = d.t;
-                window.latestHum = d.h;
-                window.latestGas = d.g;
-                updateCharts(d.t, d.h, d.g, d.dht_err, false, latency, d.rssi);
+                const isActuallyOnline = d.is_online !== false; 
+
+                if (!isActuallyOnline) {
+                    // Car is off, trigger simulation
+                    window.latestTemp = (window.latestTemp || 25) + (Math.random() * 0.4 - 0.2);
+                    window.latestHum = (window.latestHum || 50) + (Math.random() * 2 - 1);
+                    window.latestGas = (window.latestGas || 300) + (Math.random() * 10 - 5);
+                    updateCharts(window.latestTemp, window.latestHum, window.latestGas, false, true, 0, -100);
+                } else {
+                    window.latestTemp = d.t;
+                    window.latestHum = d.h;
+                    window.latestGas = d.g;
+                    updateCharts(d.t, d.h, d.g, d.dht_err, false, latency, d.rssi);
+                }
             }).catch(e => {
                 window.latestTemp = (window.latestTemp || 25) + (Math.random() * 0.4 - 0.2);
                 window.latestHum = (window.latestHum || 50) + (Math.random() * 2 - 1);

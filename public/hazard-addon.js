@@ -25,8 +25,14 @@
         }
 
         if (url.startsWith("/data")) {
-          const blynkUrl = `https://blynk.cloud/external/api/get?token=${token}&V1&V2&V3&V4`;
-          return orig(blynkUrl).then(res => res.json()).then(data => {
+          const blynkDataUrl = `https://blynk.cloud/external/api/get?token=${token}&V1&V2&V3&V4`;
+          const blynkStatusUrl = `https://blynk.cloud/external/api/isHardwareConnected?token=${token}`;
+
+          return Promise.all([
+            orig(blynkDataUrl).then(r => r.json()).catch(() => ({})),
+            orig(blynkStatusUrl).then(r => r.text()).catch(() => "false")
+          ]).then(([data, status]) => {
+            const isOnline = status.trim() === "true";
             const t = data.hasOwnProperty('V1') ? parseFloat(data.V1) : null;
             const g = data.hasOwnProperty('V3') ? parseInt(data.V3) : null;
             const s = data.hasOwnProperty('V4') ? parseInt(data.V4) : -100;
@@ -36,7 +42,8 @@
               h: data.V2 || 0,
               g: g !== null ? g : 0,
               rssi: s,
-              dht_err: t === null
+              dht_err: (t === null || !isOnline),
+              is_online: isOnline
             }), { headers: { 'Content-Type': 'application/json' } });
           });
         }
