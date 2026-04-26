@@ -136,7 +136,7 @@
         if (url && url.startsWith("/") && !url.startsWith("//")) {
           const ip = getCarIp();
           // Don't rewrite app routes — only the hardware endpoints the firmware exposes.
-          const hwPaths = ["/data", "/cmd", "/move", "/stop", "/forward", "/backward", "/left", "/right", "/status"];
+          const hwPaths = ["/data", "/cmd", "/move", "/stop", "/forward", "/backward", "/left", "/right", "/status", "/action"];
           if (ip && hwPaths.some(p => url === p || url.startsWith(p + "?") || url.startsWith(p + "/"))) {
             const newUrl = ip + url;
             const newInit = Object.assign({ mode: "cors", cache: "no-store" }, init || {});
