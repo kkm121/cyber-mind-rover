@@ -1708,7 +1708,16 @@
 
         window.sendCmd = function (cmd, label) {
             if (currentCmd !== cmd) {
-                currentCmd = cmd; fetch(`/action?dir=${cmd}`).catch(e => { });
+                currentCmd = cmd;
+                // === BLYNK CLOUD COMMAND DISPATCH (V0) ===
+                const token = localStorage.getItem('carIp') || '';
+                if (!token) {
+                    console.warn('[Blynk] No auth token configured. Open the ⚙ Token panel to connect.');
+                } else {
+                    const url = `https://blynk.cloud/external/api/update?token=${encodeURIComponent(token)}&V0=${encodeURIComponent(cmd)}`;
+                    // no-cors keeps commands fast (opaque response is fine — Blynk accepts simple GETs)
+                    fetch(url, { mode: 'no-cors', cache: 'no-store' }).catch(() => { });
+                }
                 const el = document.getElementById('cmd-text');
                 if (el) {
                     el.innerText = label;
@@ -1735,17 +1744,41 @@
             gChart = new Chart(document.getElementById('gChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#ffbbed', backgroundColor: 'rgba(255,187,237,0.1)', fill: true }] }, options: opt });
         }
 
+        // === BLYNK CLOUD TELEMETRY POLL (V1=Temp, V2=Hum, V3=Gas) — every 3s ===
+        window.blynkLinkActive = false;
         setInterval(() => {
-            fetch('/data').then(r => r.json()).then(d => {
-                window.latestTemp = d.t;
-                window.latestGas = d.g;
-                updateCharts(d.t, d.g, d.dht_err, false);
-            }).catch(e => {
-                window.latestTemp = window.latestTemp + (Math.random() * 0.4 - 0.2);
-                window.latestGas = window.latestGas + (Math.random() * 10 - 5);
+            const token = localStorage.getItem('carIp') || '';
+            if (!token) {
+                // No token yet — keep simulating so the UI stays alive
+                window.latestTemp = (window.latestTemp || 24) + (Math.random() * 0.4 - 0.2);
+                window.latestHum  = (window.latestHum  || 45) + (Math.random() * 0.4 - 0.2);
+                window.latestGas  = (window.latestGas  || 320) + (Math.random() * 10 - 5);
+                window.blynkLinkActive = false;
                 updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true);
-            });
-        }, 1500);
+                return;
+            }
+            const url = `https://blynk.cloud/external/api/get?token=${encodeURIComponent(token)}&V1&V2&V3`;
+            fetch(url, { cache: 'no-store' })
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(arr => {
+                    // Blynk returns ["<V1>", "<V2>", "<V3>"] as strings
+                    const t = parseFloat(arr[0]);
+                    const h = parseFloat(arr[1]);
+                    const g = parseInt(arr[2], 10);
+                    const err = isNaN(t) || isNaN(h);
+                    if (!isNaN(t)) window.latestTemp = t;
+                    if (!isNaN(h)) window.latestHum  = h;
+                    if (!isNaN(g)) window.latestGas  = g;
+                    window.blynkLinkActive = true;
+                    updateCharts(window.latestTemp, window.latestGas, err, false);
+                })
+                .catch(() => {
+                    window.blynkLinkActive = false;
+                    window.latestTemp = (window.latestTemp || 24) + (Math.random() * 0.4 - 0.2);
+                    window.latestGas  = (window.latestGas  || 320) + (Math.random() * 10 - 5);
+                    updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true);
+                });
+        }, 3000);
 
         function updateCharts(t, g, err, isSim) {
             const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1760,7 +1793,7 @@
             }
 
             let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : t.toFixed(1) + "°"; hudT.style.color = (t > 40 && !err) ? "#ef4444" : "#ffffff"; }
-            let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : "45.2%";
+            let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : (typeof window.latestHum === 'number' ? window.latestHum.toFixed(1) + "%" : "—");
             let hudG = document.getElementById('hud-g'); if (hudG) { hudG.innerText = g; hudG.style.color = g > 1050 ? "#ef4444" : "#ffffff"; }
 
             const statBox = document.getElementById('hud-status-box');
@@ -1772,6 +1805,9 @@
                 } else if (g > 1050 || t > 40) {
                     statBox.style.border = "1px solid rgba(239,68,68,0.5)"; statBox.style.background = "rgba(239,68,68,0.1)";
                     statText.className = "text-xs lg:text-sm font-bold text-red-500 animate-pulse tracking-widest mt-1"; statText.innerText = "HAZARD DETECTED";
+                } else if (window.blynkLinkActive && !isSim) {
+                    statBox.style.border = "1px solid rgba(34,245,163,0.5)"; statBox.style.background = "rgba(34,245,163,0.08)";
+                    statText.className = "text-xs lg:text-sm font-bold text-emerald-400 tracking-widest mt-1"; statText.innerText = "GLOBAL LINK ACTIVE";
                 } else {
                     statBox.style.border = "1px solid rgba(255,255,255,0.05)"; statBox.style.background = "#08080a";
                     statText.className = "text-xs lg:text-sm font-bold text-green-400 tracking-wider mt-1"; statText.innerText = isSim ? "SYS READY (SIM)" : "ENVIRONMENT SAFE";
