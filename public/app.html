@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hazard Recon Car - Neural OS</title>
+
+    <!-- CDN Logic with True Offline Detection -->
+    <script>
+        window.isOfflineMode = false;
+        function triggerOfflineMode() {
+            if (window.isOfflineMode) return;
+            window.isOfflineMode = true;
+            console.warn("CDN Failed. Entering Offline App Mode.");
+            document.documentElement.classList.add('offline-mode');
+            window.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('offline-banner').classList.remove('hidden', 'offline-hide');
+                document.getElementById('fab-chat').style.display = 'none';
+                document.getElementById('btn-hands').style.display = 'none';
+                document.getElementById('btn-face').style.display = 'none';
+                document.getElementById('ai-webcam-panel').style.display = 'none';
+                document.getElementById('webgl-container').style.display = 'none';
+            });
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com" onerror="triggerOfflineMode()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="triggerOfflineMode()"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"
+        onerror="triggerOfflineMode()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"
+        onerror="triggerOfflineMode()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"
+        onerror="triggerOfflineMode()"></script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #05020a;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            scroll-behavior: smooth;
+            color: white;
+        }
+
+        /* =======================================================
+           TRUE OFFLINE APP CSS (Takes over when Tailwind fails)
+           ======================================================= */
+        .offline-mode body {
+            background: #060608;
+            overflow-y: auto;
+        }
+
+        .offline-mode nav,
+        .offline-mode #home,
+        .offline-mode #lab,
+        .offline-mode #loader,
+        .offline-mode .stars-sparkle,
+        .offline-mode #bottom-glow {
+            display: none !important;
+        }
+
+        .offline-mode #scroll-container {
+            position: relative;
+            height: auto;
+            min-height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px 15px 40px 15px;
+            transform: none !important;
+            pointer-events: auto;
+        }
+
+        .offline-mode section {
+            height: auto;
+            width: 100%;
+            max-width: 500px;
+            padding: 0;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .offline-mode #offline-banner {
+            display: flex;
+            width: 100%;
+            max-width: 500px;
+            background: rgba(185, 28, 28, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 12px;
+            padding: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .offline-mode #offline-banner p {
+            color: #f87171;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-align: center;
+            margin: 0;
+        }
+
+        .offline-mode h2 {
+            font-size: 18px;
+            text-align: center;
+            margin: 0 0 20px 0;
+            color: #fff;
+            letter-spacing: 4px;
+            font-family: sans-serif;
+            text-transform: uppercase;
+        }
+
+        /* Offline Telemetry Grid */
+        .offline-mode .offline-hide {
+            display: none !important;
+        }
+
+        /* Hides canvas charts */
+        .offline-mode .mt-4.grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .offline-mode .data-box {
+            background: #111116;
+            border: 1px solid #2a2a35;
+            border-radius: 16px;
+            padding: 20px 10px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        .offline-mode .data-box div:first-child {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .offline-mode #hud-t,
+        .offline-mode #hud-h,
+        .offline-mode #hud-g {
+            font-size: 26px;
+            color: #fff;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .offline-mode #hud-status {
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            color: #10b981;
+        }
+
+        /* Offline Command Center */
+        .offline-mode .glass-solid {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .offline-mode .bg-\[\#050408\] {
+            background: #0d0d12;
+            border: 1px solid #222;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .offline-mode .d-pad {
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 15px;
+            width: max-content;
+        }
+
+        .offline-mode .ctrl-btn {
+            background: #1a1a24;
+            border: 1px solid #333;
+            width: 65px;
+            height: 65px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .offline-mode .ctrl-btn:active,
+        .offline-mode .ctrl-btn.active {
+            background: #ffffff;
+            border-color: #ffffff;
+            transform: scale(0.95);
+        }
+
+        .offline-mode .ctrl-btn:active svg,
+        .offline-mode .ctrl-btn.active svg {
+            stroke: #000;
+        }
+
+        .offline-mode .center {
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            border: 2px solid #ff007f;
+            color: #ff007f;
+        }
+
+        .offline-mode .center:active,
+        .offline-mode .center.active {
+            background: #ff007f;
+            border-color: #ff007f;
+        }
+
+        .offline-mode .center:active svg,
+        .offline-mode .center.active svg {
+            stroke: #fff;
+        }
+
+        .offline-mode .flex.justify-center.gap-4.mb-8 {
+            display: none !important;
+        }
+
+        /* Hide AI buttons */
+
+        .offline-mode .mt-6.bg-\[\#020103\] {
+            margin-top: 25px;
+            background: #0a0a0f;
+            border: 1px solid #222;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .offline-mode #cmd-text {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: white;
+            margin: 10px 0 0 0;
+            font-family: sans-serif;
+        }
+
+        .offline-mode p.text-\[10px\] {
+            font-size: 10px;
+            color: #666;
+            font-family: monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 15px 0 0 0;
+            text-align: center;
+        }
+
+        /* =======================================================
+           STANDARD ONLINE CSS
+           ======================================================= */
+        /* SCROLL CONTAINER */
+        #scroll-container {
+            height: 100vh;
+            width: 100vw;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+            position: absolute;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        section {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px 8vw;
+            pointer-events: auto;
+        }
+
+        /* 3D CANVAS */
+        #webgl-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #bottom-glow {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25vh;
+            background: linear-gradient(to top, rgba(255, 0, 127, 0.15) 0%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* UI STYLES */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            gap: 40px;
+            padding: 30px 60px;
+            z-index: 50;
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            font-family: 'Syncopate', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            transition: 0.3s;
+            opacity: 0.5;
+            text-transform: uppercase;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            opacity: 1;
+            text-shadow: 0 0 15px #ffffff;
+        }
+
+        .glass-solid {
+            background: rgba(5, 2, 10, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            border-radius: 24px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .main-title {
+            font-family: 'Syncopate', sans-serif;
+            font-size: clamp(3rem, 6vw, 6.5rem);
+            letter-spacing: 10px;
+            color: #ffffff;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+            line-height: 1.1;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #e2e8f0;
+            margin-bottom: 40px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 20px;
+            justify-content: flex-start;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        .badge {
+            background: rgba(15, 15, 20, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 40px;
+            padding: 12px 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        .badge-dot {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #10b981;
+            animation: pulseDot 2s infinite;
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+                filter: brightness(1.5);
+            }
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-200%);
+                opacity: 0;
+            }
+        }
+
+        .cmd-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            padding: 15px 35px;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: 3px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .cmd-btn:hover,
+        .cmd-btn.active {
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .lab-card {
+            background: #08080a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .lab-card:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .data-box {
+            background: #08080a;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            position: relative;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 15px 0;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #ffffff;
+            margin-top: -11px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        /* UPGRADED D-PAD */
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            grid-gap: 15px;
+            justify-items: center;
+            align-items: center;
+            margin: 0 auto;
+            width: max-content;
+        }
+
+        .ctrl-btn {
+            background: #0a0a0f;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 25px;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .ctrl-btn svg {
+            width: 30px;
+            height: 30px;
+            transition: stroke 0.1s;
+            stroke: #fff;
+            pointer-events: none;
+        }
+
+        .ctrl-btn:active,
+        .ctrl-btn.active {
+            background: #ffffff;
+            border-color: #ffffff;
+            transform: scale(0.95);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+        }
+
+        .ctrl-btn:active svg,
+        .ctrl-btn.active svg {
+            stroke: #000;
+        }
+
+        .slide-left {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .slide-right {
+            grid-column: 3;
+            grid-row: 1;
+        }
+
+        .left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .center {
+            grid-column: 2;
+            grid-row: 2;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            border-color: #ff007f;
+            color: #ff007f;
+        }
+
+        .right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .center svg {
+            stroke: #ff007f;
+            width: 24px;
+            height: 24px;
+        }
+
+        .center:active,
+        .center.active {
+            background: #ff007f;
+            border-color: #ff007f;
+            box-shadow: 0 0 30px #ff007f;
+        }
+
+        /* SCROLLBAR FOR CHAT */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        /* LOADER */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2048&auto=format&fit=crop') center/cover;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s ease-out, visibility 1s;
+            pointer-events: auto;
+        }
+
+        #loader::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+        }
+
+        .cosmic-spinner {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            z-index: 10;
+            margin-bottom: 30px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top-color: #00d4ff;
+            animation: spin 1.5s infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* AI CURSOR */
+        #ai-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 0 20px #ffffff;
+            transition: transform 0.1s, background 0.1s;
+            transform: translate(-50%, -50%);
+            border: 2px solid #fff;
+            mix-blend-mode: screen;
+        }
+
+        #ai-cursor.pinching {
+            transform: translate(-50%, -50%) scale(0.5);
+            background: #ff007f;
+            box-shadow: 0 0 30px #ff007f;
+            border-color: #ffffff;
+        }
+
+        /* FLOATING CHAT WIDGET (BOTTOM LEFT) */
+        #fab-chat {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            background: rgba(45, 15, 50, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+        }
+
+        #fab-chat:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(255, 0, 127, 0.4);
+        }
+
+        #chat-panel {
+            position: fixed;
+            bottom: 90px;
+            left: 30px;
+            z-index: 99;
+            width: 350px;
+            height: 450px;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+        }
+
+        #chat-panel.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* MOBILE OPTIMIZATIONS */
+        @media (max-width: 768px) {
+            .hide-on-mobile {
+                display: none !important;
+            }
+
+            .control-grid-mobile {
+                grid-template-columns: 1fr !important;
+            }
+
+            .main-title {
+                align-items: center;
+                text-align: center;
+                font-size: 3.5rem;
+            }
+
+            .subtitle {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .badge-container {
+                justify-content: center;
+            }
+
+            nav {
+                justify-content: center;
+                padding: 15px;
+                gap: 15px;
+            }
+
+            .nav-link {
+                font-size: 0.6rem;
+                letter-spacing: 2px;
+            }
+
+            #chat-panel {
+                width: calc(100vw - 40px);
+                left: 20px;
+                bottom: 80px;
+                height: 400px;
+            }
+
+            #fab-chat {
+                left: 20px;
+                bottom: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader">
+        <div class="cosmic-spinner"></div>
+        <div class="loader-text"
+            style="font-family: 'Syncopate', sans-serif; font-size: 1.2rem; font-weight: 700; letter-spacing: 10px; color: #ffffff; margin-top:20px;">
+            BOOTING AI</div>
+    </div>
+
+    <!-- 3D ENGINE BACKGROUND -->
+    <div id="webgl-container"></div>
+    <div id="ai-cursor"></div>
+
+    <nav>
+        <a class="nav-link active" onclick="navTo(0)">HOME</a>
+        <a class="nav-link" onclick="navTo(1)">PHYSICS LAB</a>
+        <a class="nav-link" onclick="navTo(2)">HUD</a>
+        <a class="nav-link" onclick="navTo(3)">COMMAND CENTER</a>
+    </nav>
+
+    <!-- SCROLL CONTAINER -->
+    <div id="scroll-container">
+
+        <section id="home">
+            <div class="w-full max-w-[1400px] mx-auto flex flex-col align-start">
+
+                <!-- OFFLINE BANNER -->
+                <div id="offline-banner"
+                    class="hidden mb-6 bg-red-900/30 border border-red-500 rounded-xl p-4 w-max shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                    <p class="text-red-400 font-mono text-xs font-bold tracking-widest">⚠️ OFFLINE MODE ACTIVE: CLOUD AI
+                        DISCONNECTED</p>
+                </div>
+
+                <div class="main-title">
+                    <span>HAZARD RECON</span>
+                    <span>CAR</span>
+                </div>
+                <p class="subtitle">Where Innovation Meets Infinity. Safely explore hazardous frontiers with AI
+                    edge-computing.</p>
+                <div class="badge-container">
+                    <div class="badge" id="dht-badge">
+                        <div class="badge-dot"></div> DHT: WAITING
+                    </div>
+                    <div class="badge" id="mq-badge">
+                        <div class="badge-dot"></div> MQ: WAITING
+                    </div>
+                </div>
+                <div><button onclick="navTo(3)" class="cmd-btn">OPEN COMMAND CENTER</button></div>
+            </div>
+        </section>
+
+        <!-- PHYSICS LAB -->
+        <section id="lab">
+            <div class="glass-solid p-8 w-full max-w-6xl ml-auto md:mr-10">
+                <h2 class="text-2xl font-bold mb-6 text-white text-center tracking-widest uppercase"
+                    style="font-family: 'Syncopate', sans-serif;">Broad Area Physical Sciences</h2>
+                <div id="lab-menu" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div class="lab-card p-4" onclick="openLab('lab1')">
+                        <div class="lab-icon text-2xl">🌡️</div>
+                        <h3 class="font-bold text-white text-xs tracking-widest uppercase mt-2">Solid State</h3>
+                    </div>
+                    <div class="lab-card p-4" onclick="openLab('lab2')">
+                        <div class="lab-icon text-2xl">☁️</div>
+                        <h3 class="font-bold text-white text-xs tracking-widest uppercase mt-2">Molecular</h3>
+                    </div>
+                    <div class="lab-card p-4" onclick="openLab('lab3')">
+                        <div class="lab-icon text-2xl">💡</div>
+                        <h3 class="font-bold text-white text-xs tracking-widest uppercase mt-2">Optoelectronics</h3>
+                    </div>
+                    <div class="lab-card p-4" onclick="openLab('lab4')">
+                        <div class="lab-icon text-2xl">🔥</div>
+                        <h3 class="font-bold text-white text-xs tracking-widest uppercase mt-2">Thermodynamics</h3>
+                    </div>
+                </div>
+                <div id="lab-view" class="hidden relative">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                        <h3 id="lv-title" class="text-base md:text-xl font-bold text-white tracking-widest"
+                            style="font-family: 'Syncopate', sans-serif;">Lab Title</h3>
+                        <button onclick="closeLab()" class="cmd-btn" style="padding: 6px 15px; font-size: 0.6rem;">✖
+                            CLOSE</button>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4 items-stretch">
+                        <div
+                            class="bg-[#050408] p-6 rounded-xl border border-slate-800 text-center flex flex-col justify-center">
+                            <h4 class="text-[10px] text-slate-500 mb-4 font-bold uppercase tracking-widest"
+                                id="lv-desc">Description</h4>
+                            <div id="lv-controls" class="space-y-3 mt-6"></div>
+                        </div>
+                        <div
+                            class="bg-[#050408] border border-slate-800 p-6 rounded-xl flex flex-col justify-center items-center relative overflow-hidden min-h-[250px]">
+                            <span
+                                class="text-[10px] text-slate-500 mb-2 uppercase tracking-widest font-bold z-10 absolute top-4">Live
+                                Output</span>
+                            <div id="lv-output"
+                                class="text-3xl font-bold text-white tracking-tighter z-10 absolute top-10"
+                                style="font-family: 'Syncopate', sans-serif;">--</div>
+                            <div id="lv-animation" class="w-full h-full relative flex items-end justify-center"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TELEMETRY HUD -->
+        <section id="telemetry">
+            <div class="glass-solid p-8 w-full max-w-6xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6 text-white text-center tracking-widest uppercase"
+                    style="font-family: 'Syncopate', sans-serif;">LIVE TELEMETRY HUD</h2>
+
+                <div class="grid lg:grid-cols-2 gap-4 lg:gap-8 offline-hide">
+                    <div class="bg-[#050408] p-4 rounded-xl border border-slate-800 h-[220px] flex flex-col">
+                        <div class="text-[10px] text-cyan-400 mb-2 tracking-widest font-bold text-center">THERMAL ARRAY
+                        </div>
+                        <div class="flex-1 relative"><canvas id="tChart"></canvas></div>
+                    </div>
+                    <div class="bg-[#050408] p-4 rounded-xl border border-slate-800 h-[220px] flex flex-col">
+                        <div class="text-[10px] text-amber-400 mb-2 tracking-widest font-bold text-center">GAS DENSITY
+                        </div>
+                        <div class="flex-1 relative"><canvas id="gChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="data-box p-4">
+                        <div class="text-[10px] text-slate-500 mb-1 font-bold">CORE TEMP</div>
+                        <div id="hud-t" class="text-xl font-bold text-white">--°</div>
+                    </div>
+                    <div class="data-box p-4">
+                        <div class="text-[10px] text-slate-500 mb-1 font-bold">HUMIDITY</div>
+                        <div id="hud-h" class="text-xl font-bold text-white">--%</div>
+                    </div>
+                    <div class="data-box p-4">
+                        <div class="text-[10px] text-slate-500 mb-1 font-bold">GAS PPM</div>
+                        <div id="hud-g" class="text-xl font-bold text-white">--</div>
+                    </div>
+                    <div class="data-box p-4" id="hud-status-box">
+                        <div class="text-[10px] text-slate-500 mb-1 font-bold">STATUS</div>
+                        <div id="hud-status" class="text-xs font-bold text-green-400">SYS READY</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMMAND CENTER -->
+        <section id="control">
+            <div class="glass-solid p-8 w-full max-w-6xl mx-auto text-center" style="margin-top: 80px;">
+                <h2 class="text-3xl font-bold mb-6 text-white tracking-widest uppercase"
+                    style="font-family: 'Syncopate', sans-serif;">CAR COMMAND CENTER</h2>
+
+                <!-- AI MODE TOGGLES -->
+                <div class="flex justify-center gap-4 mb-8">
+                    <button id="btn-manual" onclick="setMode('manual')" class="cmd-btn active">MANUAL</button>
+                    <button id="btn-hands" onclick="setMode('hands')" class="cmd-btn hide-on-mobile">KINETIC
+                        (HANDS)</button>
+                    <button id="btn-face" onclick="setMode('face')" class="cmd-btn text-xs px-6 hide-on-mobile">NEURAL
+                        (FACE)</button>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 items-stretch control-grid-mobile">
+
+                    <!-- UPGRADED D-PAD -->
+                    <div
+                        class="bg-[#050408] p-6 rounded-3xl border border-slate-800 flex flex-col justify-center relative shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                        <div class="d-pad mb-4 relative z-10">
+                            <!-- Top Row: Slide L, Forward, Slide R -->
+                            <div class="ctrl-btn slide-left" onmousedown="sendCmd('SL', 'SLIDE LEFT')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('SL', 'SLIDE LEFT')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M11 17l-5-5 5-5" />
+                                    <path d="M18 17l-5-5 5-5" />
+                                </svg></div>
+                            <div class="ctrl-btn up" onmousedown="sendCmd('F', 'FORWARD')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('F', 'FORWARD')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M18 15l-6-6-6 6" />
+                                </svg></div>
+                            <div class="ctrl-btn slide-right" onmousedown="sendCmd('SR', 'SLIDE RIGHT')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('SR', 'SLIDE RIGHT')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M13 17l5-5-5-5" />
+                                    <path d="M6 17l5-5-5-5" />
+                                </svg></div>
+
+                            <!-- Middle Row: Turn L, Stop, Turn R -->
+                            <div class="ctrl-btn left" onmousedown="sendCmd('L', 'TURN LEFT')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('L', 'TURN LEFT')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                    <path d="M3 3v5h5" />
+                                </svg></div>
+                            <div class="ctrl-btn center" onmousedown="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('S', 'STOP')"><svg viewBox="0 0 24 24" fill="none"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                </svg></div>
+                            <div class="ctrl-btn right" onmousedown="sendCmd('R', 'TURN RIGHT')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('R', 'TURN RIGHT')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                    <path d="M21 3v5h-5" />
+                                </svg></div>
+
+                            <!-- Bottom Row: Reverse -->
+                            <div class="ctrl-btn down" onmousedown="sendCmd('B', 'REVERSE')"
+                                onmouseup="sendCmd('S', 'STOP')" onmouseleave="sendCmd('S', 'STOP')"
+                                ontouchstart="sendCmd('B', 'REVERSE')" ontouchend="sendCmd('S', 'STOP')"><svg
+                                    viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M6 9l6 6 6-6" />
+                                </svg></div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Click / Touch / Arrow
+                            Keys to Drive</p>
+                    </div>
+
+                    <!-- AI WEBCAM VIEW -->
+                    <div id="ai-webcam-panel"
+                        class="bg-[#050408] p-6 rounded-3xl border border-slate-800 flex flex-col justify-center items-center relative min-h-[250px] hide-on-mobile shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                        <h4 id="ai-status-text" class="text-white font-bold tracking-widest text-xs mb-4">MANUAL
+                            (KEYBOARD/MOUSE)</h4>
+
+                        <div id="ai-instructions" class="text-[10px] text-slate-400 font-mono leading-loose mb-4">
+                            Point index finger to move cursor.<br>Pinch thumb & index to click and drag.
+                        </div>
+
+                        <div id="video-container" class="hidden relative w-full flex flex-col items-center">
+                            <video id="webcam"
+                                class="w-full max-w-[180px] mx-auto rounded-xl border border-white object-cover shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                                autoplay playsinline style="transform: scaleX(-1);"></video>
+                            <p id="debug-text"
+                                class="text-[10px] mt-3 text-cyan-400 font-mono tracking-widest font-bold h-4"></p>
+                        </div>
+                        <button id="cam-btn" onclick="startAI()"
+                            class="cmd-btn w-full max-w-[280px] mx-auto text-xs py-3">ENABLE CAMERA</button>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-6 bg-[#020103] p-6 rounded-2xl border border-slate-800 w-full max-w-sm mx-auto shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+                    <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest font-bold">Transmitting
+                        Telemetry</p>
+                    <h3 id="cmd-text" class="text-4xl font-bold text-white tracking-tighter transition-colors"
+                        style="font-family: 'Syncopate', sans-serif;">STOP</h3>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- FLOATING CHAT BUTTON & PANEL (BOTTOM LEFT) -->
+    <div id="fab-chat" class="flex items-center justify-center gap-3 px-5 py-3" onclick="toggleChat()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M10.5 0C10.5 5.8 5.8 10.5 0 10.5C5.8 10.5 10.5 15.2 10.5 21C10.5 15.2 15.2 10.5 21 10.5C15.2 10.5 10.5 5.8 10.5 0Z"
+                fill="#00d4ff" />
+            <path
+                d="M18.5 13C18.5 15.5 16.5 17.5 14 17.5C16.5 17.5 18.5 19.5 18.5 22C18.5 19.5 20.5 17.5 23 17.5C20.5 17.5 18.5 15.5 18.5 13Z"
+                fill="#ff007f" />
+        </svg>
+        <span class="font-bold text-[10px] tracking-widest text-white uppercase font-mono">Start Chat</span>
+    </div>
+
+    <div id="chat-panel" class="glass-solid border border-slate-700 rounded-3xl p-5 flex flex-col">
+        <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-pulse"></div>
+                <h4 class="text-[10px] md:text-xs text-cyan-400 font-bold uppercase tracking-widest font-mono">Neural OS
+                    Link</h4>
+            </div>
+            <button onclick="toggleChat()" class="text-slate-400 hover:text-white transition-colors">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div id="chat-history"
+            class="flex-1 overflow-y-auto text-xs font-mono text-slate-300 space-y-3 mb-4 pr-2 custom-scrollbar flex flex-col">
+            <div class="text-cyan-500">> Neural OS initialized. Analyzing telemetry streams. Awaiting queries.</div>
+        </div>
+
+        <div class="flex gap-2 mt-auto">
+            <input type="text" id="chat-input" onkeypress="handleChatKey(event)"
+                class="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-[10px] font-mono text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                placeholder="Ask AI or say 'Do a victory dance'...">
+            <button onclick="sendChatMessage()"
+                class="bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 rounded-xl px-4 py-2 text-[10px] font-bold tracking-widest transition-all">SEND</button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT MODULE -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // Async Delay Helper for Agentic Execution
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        // --- 1. THREE.JS BLACK HOLE ENGINE & STATIC STARFIELD ---
+        const webglContainer = document.getElementById('webgl-container');
+        if (!window.isOfflineMode) {
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x05020a, 0.008);
+
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Lock pixel ratio to improve lag on weak GPUs
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            webglContainer.appendChild(renderer.domElement);
+
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.6, 0.2);
+            const composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            // ==========================================
+            // FIX: STATIC HARDWARE ACCELERATED STARS 
+            // ==========================================
+            const starCount = 2000;
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                starPos[i * 3] = (Math.random() - 0.5) * 250; // Spread X
+                starPos[i * 3 + 1] = (Math.random() - 0.5) * 250; // Spread Y
+                starPos[i * 3 + 2] = (Math.random() - 0.5) * 150 - 60; // Push deep into the Z background
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0x81f4ff, size: 0.15, transparent: true, opacity: 0.8 });
+            const starField = new THREE.Points(starGeo, starMat);
+            // ADDED DIRECTLY TO SCENE (NOT THE ROTATING COSMIC GROUP)
+            scene.add(starField);
+
+            // Rotating Cosmic elements go in here
+            const cosmicGroup = new THREE.Group();
+            scene.add(cosmicGroup);
+
+            // Black Hole Sphere
+            const bhGeometry = new THREE.SphereGeometry(10, 64, 64);
+            const bhVert = `varying vec3 vNormal; varying vec3 vPosition; void main() { vNormal = normalize(normalMatrix * normal); vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * vec4(vPosition, 1.0); }`;
+            const bhFrag = `varying vec3 vNormal; varying vec3 vPosition; void main() { 
+                vec3 viewDir = normalize(-vPosition); float rim = 1.0 - max(dot(viewDir, vNormal), 0.0); rim = smoothstep(0.85, 1.0, rim); 
+                vec3 lightDir = normalize(vec3(-1.0, 1.0, 0.3)); float glow = max(dot(vNormal, lightDir), 0.0); 
+                vec3 rimColor = vec3(0.9, 0.5, 0.2) * rim * pow(glow, 2.0) * 4.0; gl_FragColor = vec4(rimColor, 1.0); }`;
+            const bhMaterial = new THREE.ShaderMaterial({ vertexShader: bhVert, fragmentShader: bhFrag, transparent: true });
+            const blackHole = new THREE.Mesh(bhGeometry, bhMaterial);
+            cosmicGroup.add(blackHole);
+
+            // Accretion Disk Plasma
+            const diskUniforms = { u_time: { value: 0.0 } };
+            const diskVert = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+            const diskFrag = `
+                uniform float u_time; varying vec2 vUv;
+                float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+                float noise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); vec2 u = f*f*(3.0-2.0*f); return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x), mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y); }
+                float fbm(vec2 p) { float v = 0.0; float a = 0.5; vec2 shift = vec2(100.0); mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50)); for (int i = 0; i < 4; ++i) { v += a * noise(p); p = rot * p * 2.0 + shift; a *= 0.5; } return v; }
+                void main() {
+                    vec2 uv = vUv * 2.0 - 1.0; float r = length(uv); float angle = atan(uv.y, uv.x);
+                    float spiral = angle - r * 3.0 + u_time * 0.15;
+                    float n = fbm(vec2(r * 15.0, spiral * 4.0)); float streak = fbm(vec2(r * 8.0 - u_time * 0.2, spiral * 8.0));
+                    float distR = r + (n - 0.5) * 0.04;
+                    float alphaMask = smoothstep(0.19, 0.20, distR) * (1.0 - smoothstep(0.85, 0.95, distR));
+                    vec3 color = vec3(0.0);
+
+                    float cyan = smoothstep(0.22, 0.20, distR) * smoothstep(0.19, 0.20, distR); color += vec3(0.5, 0.8, 1.0) * cyan * 5.0;
+                    float blue = smoothstep(0.30, 0.25, distR) * smoothstep(0.20, 0.25, distR); color += vec3(0.05, 0.0, 0.8) * blue * 2.5;
+                    float pink = smoothstep(0.50, 0.40, distR) * smoothstep(0.25, 0.40, distR); color += vec3(1.0, 0.0, 0.6) * pink * 2.0;
+                    float orange = smoothstep(0.70, 0.60, distR) * smoothstep(0.40, 0.60, distR); color += vec3(1.0, 0.2, 0.0) * orange * 1.5;
+                    float yellow = smoothstep(0.95, 0.80, distR) * smoothstep(0.60, 0.80, distR); color += vec3(1.0, 0.6, 0.1) * yellow * 1.5;
+
+                    float flowIntensity = 0.6 + 0.6 * streak; color *= flowIntensity;
+                    gl_FragColor = vec4(color * alphaMask, alphaMask * flowIntensity);
+                }`;
+            const diskGeo = new THREE.PlaneGeometry(100, 100);
+            const diskMat = new THREE.ShaderMaterial({ vertexShader: diskVert, fragmentShader: diskFrag, uniforms: diskUniforms, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+            const accretionDisk = new THREE.Mesh(diskGeo, diskMat);
+            accretionDisk.rotation.x = -Math.PI / 2;
+            cosmicGroup.add(accretionDisk);
+
+            // FIX: Asteroid Debris Belt perfectly aligned on the same rotation plane
+            const debrisCount = 400;
+            const debrisGeo = new THREE.IcosahedronGeometry(0.35, 0); // Low poly rock
+            const debrisMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8, metalness: 0.2 });
+            const debrisBelt = new THREE.InstancedMesh(debrisGeo, debrisMat, debrisCount);
+
+            const dummy = new THREE.Object3D();
+            for (let i = 0; i < debrisCount; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let radius = 12.5 + Math.random() * 20;
+                dummy.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, (Math.random() - 0.5) * 1.5);
+                dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                let scale = 0.5 + Math.random() * 1.5;
+                dummy.scale.set(scale, scale, scale);
+                dummy.updateMatrix();
+                debrisBelt.setMatrixAt(i, dummy.matrix);
+            }
+
+            debrisBelt.rotation.x = -Math.PI / 2;
+            cosmicGroup.add(debrisBelt);
+
+            // Asteroid Lighting
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            sunLight.position.set(-10, 10, 5);
+            scene.add(sunLight);
+            const ambientLight = new THREE.AmbientLight(0x404040, 2.0);
+            scene.add(ambientLight);
+
+            // Inner Wireframe
+            const wireframeGeometry = new THREE.IcosahedronGeometry(15, 2);
+            const edges = new THREE.EdgesGeometry(wireframeGeometry);
+            const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.0 });
+            const wireframeSphere = new THREE.LineSegments(edges, wireframeMaterial);
+            cosmicGroup.add(wireframeSphere);
+
+            camera.position.set(0, 0, 35); camera.lookAt(0, 0, 0);
+            cosmicGroup.rotation.set(0.25, 0.1, -0.55);
+
+            // --- STATE MACHINE PARALLAX FOR THREE.JS ---
+            let targetPos = new THREE.Vector3(-22, 2, 5);
+            let targetScale = new THREE.Vector3(1, 1, 1);
+            let targetOpacityWf = 0.0;
+            let targetRot = new THREE.Vector3(0.25, 0.1, -0.55);
+
+            window.updateThreeJSState = function (sectionId) {
+                if (sectionId === 'home') { targetPos.set(-22, 2, 5); targetScale.set(1.1, 1.1, 1.1); targetOpacityWf = 0.0; targetRot.set(0.25, 0.1, -0.55); }
+                else if (sectionId === 'lab') { targetPos.set(0, 0, 0); targetScale.set(0.6, 0.6, 0.6); targetOpacityWf = 1.0; targetRot.set(0.25, 0.1, -0.55); }
+                else if (sectionId === 'telemetry') { targetPos.set(25, 15, -10); targetScale.set(1.8, 1.8, 1.8); targetOpacityWf = 0.0; targetRot.set(0.6, -0.3, -0.8); }
+                else if (sectionId === 'control') { targetPos.set(0, 0, -20); targetScale.set(1.5, 1.5, 1.5); targetOpacityWf = 0.0; targetRot.set(0.25, 0.1, -0.55); }
+            }
+
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                if (window.innerWidth <= 768) return;
+
+                const elapsedTime = clock.getElapsedTime();
+
+                // Static stars gently twinkle via opacity independently of rotation
+                starMat.opacity = 0.4 + Math.sin(elapsedTime * 2.0) * 0.4;
+
+                accretionDisk.rotation.z -= 0.003;
+                debrisBelt.rotation.z -= 0.0035; // Perfect slight orbital drift relative to plasma
+                wireframeSphere.rotation.y += 0.005;
+                wireframeSphere.rotation.x += 0.002;
+                diskUniforms.u_time.value = elapsedTime;
+
+                cosmicGroup.position.lerp(targetPos, 0.03);
+                cosmicGroup.scale.lerp(targetScale, 0.03);
+
+                cosmicGroup.rotation.x += (targetRot.x - cosmicGroup.rotation.x) * 0.03;
+                cosmicGroup.rotation.y += (targetRot.y - cosmicGroup.rotation.y) * 0.03;
+                cosmicGroup.rotation.z += (targetRot.z - cosmicGroup.rotation.z) * 0.03;
+
+                wireframeMaterial.opacity += (targetOpacityWf - wireframeMaterial.opacity) * 0.05;
+
+                composer.render();
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // --- 2. SNAP SCROLL & UI LOGIC ---
+        const sections = document.querySelectorAll('section');
+        const scrollContainer = document.getElementById('scroll-container');
+        let currentSectionIndex = 0;
+        let isScrolling = false;
+
+        window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader').style.opacity = '0'; document.getElementById('loader').style.visibility = 'hidden'; }, 1500); });
+
+        function moveToSection() {
+            if (window.isOfflineMode) {
+                // Simplified scroll for offline mode
+                sections[currentSectionIndex].scrollIntoView({ behavior: 'smooth' });
+            } else {
+                isScrolling = true; const targetId = sections[currentSectionIndex].id;
+                scrollContainer.style.transform = `translateY(-${currentSectionIndex * 100}vh)`;
+                if (window.updateThreeJSState) window.updateThreeJSState(targetId);
+                setTimeout(() => { isScrolling = false; }, 1000);
+            }
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.nav-link')[currentSectionIndex].classList.add('active');
+        }
+
+        window.navTo = function (index) { if (isScrolling || currentSectionIndex === index) return; currentSectionIndex = index; moveToSection(); }
+
+        window.addEventListener('wheel', (e) => {
+            if (window.isOfflineMode) return; // Allow native scroll offline
+            e.preventDefault(); if (isScrolling) return;
+            if (e.deltaY > 0 && currentSectionIndex < sections.length - 1) { currentSectionIndex++; moveToSection(); }
+            else if (e.deltaY < 0 && currentSectionIndex > 0) { currentSectionIndex--; moveToSection(); }
+        }, { passive: false });
+
+        // --- FLOATING CHAT LOGIC ---
+        window.toggleChat = function () {
+            const panel = document.getElementById('chat-panel');
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+            } else {
+                panel.classList.add('active');
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        // --- GLOBAL TELEMETRY VARIABLES ---
+        window.latestTemp = 24.5;
+        window.latestGas = 312;
+        window.latestErr = false;
+
+        // --- PHYSICS LAB MODULES WITH SMOOTH ANIMATIONS ---
+        window.openLab = function (id) {
+            document.getElementById('lab-menu').classList.add('hidden');
+            const v = document.getElementById('lab-view');
+            if (v) v.classList.remove('hidden');
+
+            const ctrl = document.getElementById('lv-controls');
+            const out = document.getElementById('lv-output');
+            const anim = document.getElementById('lv-animation');
+            const desc = document.getElementById('lv-desc');
+            const title = document.getElementById('lv-title');
+
+            if (id === 'lab1') {
+                if (title) title.innerText = "Solid State: Steinhart-Hart";
+                if (desc) desc.innerText = "Thermal energy excites valence electrons across the bandgap into the conduction band.";
+
+                // Initialize DOM elements for smooth animation
+                let html = '<div style="position:absolute; bottom:0; width:100%; height:40%; background:rgba(0,212,255,0.1); border-top:2px dashed rgba(0,212,255,0.5);"></div>';
+                for (let i = 0; i < 35; i++) {
+                    let left = 5 + Math.random() * 90; let delay = Math.random() * -2;
+                    html += `<div class="e-dot" style="position:absolute; bottom:0; left:${left}%; width:8px; height:8px; background:#00d4ff; border-radius:50%; box-shadow:0 0 15px #00d4ff; animation: floatUp var(--e-dur, 2s) infinite linear ${delay}s, electronJiggle 0.5s infinite alternate; opacity: 0; transition: opacity 0.3s;"></div>`;
+                }
+                if (anim) anim.innerHTML = html;
+                if (ctrl) ctrl.innerHTML = `<div class="flex justify-between text-white text-xs mb-4 font-mono font-bold uppercase tracking-widest"><span>Temperature</span><span id="vdisp" class="text-pink-400">25 °C</span></div><input type="range" min="0" max="100" value="25" oninput="window.updateL1(this.value)">`;
+                if (out) { out.style.color = "#ff007f"; out.style.textShadow = "0 0 20px rgba(255, 0, 127, 0.9)"; }
+                window.updateL1(25);
+            }
+            else if (id === 'lab2') {
+                if (title) title.innerText = "Molecular: Gas Sensor";
+                if (desc) desc.innerText = "Combustible gas strikes the sensor surface, releasing trapped electrons and collapsing the depletion region.";
+
+                let html = '<div id="gas-particles" style="position:absolute; inset:0; overflow:hidden; z-index:0;">';
+                for (let i = 0; i < 50; i++) {
+                    let left = Math.random() * 100; let top = Math.random() * 100;
+                    html += `<div class="gas-dot" style="position:absolute; left:${left}%; top:${top}%; width:6px; height:6px; border-radius:50%; animation: electronJiggle ${0.5 + Math.random()}s infinite linear; opacity:0; transition: opacity 0.2s, background 0.3s, box-shadow 0.3s;"></div>`;
+                }
+                html += `</div><div style="width:100%; height:100%; display:flex; z-index:1; position:relative;"><div id="dep-left" style="background:rgba(0,255,136,0.3); transition:width 0.2s; border-right:4px solid #00ff88; box-shadow:0 0 35px #00ff88;"></div><div style="flex:1; background:transparent; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold; letter-spacing:4px; text-shadow: 0 0 10px #000;">SnO2</div><div id="dep-right" style="background:rgba(0,255,136,0.3); transition:width 0.2s; border-left:4px solid #00ff88; box-shadow:0 0 35px #00ff88;"></div></div>`;
+
+                if (anim) anim.innerHTML = html;
+                if (ctrl) ctrl.innerHTML = `<div class="flex justify-between text-white text-xs mb-4 font-mono font-bold uppercase tracking-widest"><span>Gas Density</span><span id="vdisp" class="text-cyan-400">300 PPM</span></div><input type="range" min="10" max="1000" value="300" oninput="window.updateL2(this.value)">`;
+                if (out) { out.style.color = "#00d4ff"; out.style.textShadow = "0 0 20px rgba(0, 212, 255, 0.9)"; }
+                window.updateL2(300);
+            }
+            else if (id === 'lab3') {
+                if (title) title.innerText = "Opto: Photoconductivity";
+                if (desc) desc.innerText = "Incident light photons create electron-hole pairs within the material, drastically dropping the resistance.";
+
+                let html = '<div id="ldr-box" style="width:100%; height:100%; background:rgba(253, 224, 71, 0.1); transition:background 0.2s; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 80px #000; position:relative; overflow:hidden;">';
+                html += '<div id="photons" style="position:absolute; inset:0; z-index:0;">';
+                for (let i = 0; i < 25; i++) {
+                    let top = Math.random() * 100; let delay = Math.random() * -2;
+                    html += `<div class="photon-beam" style="position:absolute; top:${top}%; left:-10%; width:30px; height:2px; background:#fff; box-shadow:0 0 15px #fde047; transform:rotate(20deg); animation: photonShoot 1s infinite linear ${delay}s; opacity:0; transition:opacity 0.2s;"></div>`;
+                }
+                html += '</div><div style="z-index:2; font-weight:bold; color:#fff; font-size:12px; letter-spacing:4px; text-shadow: 0 0 10px #000;">CdS CELL</div><div id="e-flow" style="position:absolute; bottom:20px; width:100%; height:2px; background:rgba(255,255,255,0.2);">';
+                for (let i = 0; i < 40; i++) {
+                    let delay = Math.random() * -2;
+                    html += `<div class="flow-dot" style="position:absolute; top:-4px; left:-10px; width:10px; height:10px; background:#00d4ff; border-radius:50%; box-shadow:0 0 10px #00d4ff; animation: flowRight var(--flow-dur, 2s) infinite linear ${delay}s; opacity:0; transition:opacity 0.2s;"></div>`;
+                }
+                html += '</div></div>';
+
+                if (anim) anim.innerHTML = html;
+                if (ctrl) ctrl.innerHTML = `<div class="flex justify-between text-white text-xs mb-4 font-mono font-bold uppercase tracking-widest"><span>Illuminance</span><span id="vdisp" class="text-yellow-300">50 Lux</span></div><input type="range" min="1" max="1000" value="50" oninput="window.updateL3(this.value)">`;
+                if (out) { out.style.color = "#fde047"; out.style.textShadow = "0 0 20px rgba(253, 224, 71, 0.9)"; }
+                window.updateL3(50);
+            }
+            else if (id === 'lab4') {
+                if (title) title.innerText = "Thermodynamics: Heat Transfer";
+                if (desc) desc.innerText = "Specific Heat Capacity modeling. The metal chassis transitions to red-hot as Joules accumulate and dissipate.";
+
+                let html = `<div id="metal-block" style="width:60%; height:60%; background:#1e293b; border-radius:8px; transition:all 0.3s; box-shadow:0 0 30px rgba(0,0,0,1); position:relative; z-index:2; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; letter-spacing:2px; font-size:10px;">ALLOY</div><div id="heat-waves" style="position:absolute; top:0; left:20%; width:60%; height:100%; z-index:1; overflow:hidden;">`;
+                for (let i = 0; i < 25; i++) {
+                    let left = Math.random() * 100; let delay = Math.random() * -2; let dur = 1.0 + Math.random();
+                    html += `<div class="heat-wave" style="position:absolute; bottom:20%; left:${left}%; width:10px; height:40px; background:rgba(239, 68, 68, 0.4); filter:blur(4px); border-radius:50%; animation: floatUp ${dur}s infinite linear ${delay}s; opacity:0; transition:opacity 0.2s;"></div>`;
+                }
+                html += '</div>';
+
+                if (anim) anim.innerHTML = html;
+                if (ctrl) ctrl.innerHTML = `<div class="flex justify-between text-white text-xs mb-4 font-mono font-bold uppercase tracking-widest"><span>Heat Applied</span><span id="vdisp" class="text-red-500">1000 J</span></div><input type="range" min="0" max="10000" step="100" value="1000" oninput="window.updateL4(this.value)">`;
+                if (out) { out.style.color = "#ef4444"; out.style.textShadow = "0 0 20px rgba(239, 68, 68, 0.9)"; }
+                window.updateL4(1000);
+            }
+        }
+
+        window.closeLab = function () {
+            let view = document.getElementById('lab-view'); if (view) view.classList.add('hidden');
+            let menu = document.getElementById('lab-menu'); if (menu) menu.classList.remove('hidden');
+        }
+
+        window.updateL1 = function (v) {
+            let vdisp = document.getElementById('vdisp'); if (vdisp) vdisp.innerText = v + " °C";
+            let T = parseFloat(v) + 273.15; let exponent = 3950 * (1 / T - 1 / 298.15); let R = 10000 * Math.exp(exponent);
+            let out = document.getElementById('lv-output'); if (out) out.innerText = R.toFixed(0) + " Ω";
+
+            let count = Math.floor(v / 3.3) + 5;
+            let speed = Math.max(0.5, 3.0 - (v / 40)) + "s";
+            document.querySelectorAll('.e-dot').forEach((dot, index) => {
+                dot.style.opacity = index < count ? 1 : 0;
+                dot.style.setProperty('--e-dur', speed);
+            });
+        }
+
+        window.updateL2 = function (v) {
+            let vdisp = document.getElementById('vdisp'); if (vdisp) vdisp.innerText = v + " PPM";
+            let ratio = 11.3 * Math.pow(parseFloat(v), -0.65);
+            let out = document.getElementById('lv-output'); if (out) out.innerText = ratio.toFixed(3);
+
+            let left = document.getElementById('dep-left'); let right = document.getElementById('dep-right');
+            let color = ratio < 0.4 ? "#ff007f" : "#00d4ff";
+            if (left && right) {
+                let w = Math.max(2, ratio * 20) + "%"; left.style.width = w; right.style.width = w;
+                left.style.borderColor = color; right.style.borderColor = color;
+                left.style.boxShadow = `0 0 35px ${color}`; right.style.boxShadow = `0 0 35px ${color}`;
+                left.style.background = color === "#ff007f" ? "rgba(255,0,127,0.3)" : "rgba(0,212,255,0.3)";
+                right.style.background = color === "#ff007f" ? "rgba(255,0,127,0.3)" : "rgba(0,212,255,0.3)";
+            }
+
+            let count = Math.floor(v / 20);
+            document.querySelectorAll('.gas-dot').forEach((dot, index) => {
+                if (index < count) {
+                    dot.style.opacity = 1;
+                    dot.style.background = color;
+                    dot.style.boxShadow = `0 0 10px ${color}`;
+                } else {
+                    dot.style.opacity = 0;
+                }
+            });
+        }
+
+        window.updateL3 = function (v) {
+            let vdisp = document.getElementById('vdisp'); if (vdisp) vdisp.innerText = v + " Lux";
+            let R = 500000 * Math.pow(parseFloat(v), -0.7);
+            let out = document.getElementById('lv-output'); if (out) out.innerText = R > 1000 ? (R / 1000).toFixed(1) + " kΩ" : R.toFixed(0) + " Ω";
+
+            let box = document.getElementById('ldr-box'); if (box) box.style.background = `rgba(253, 224, 71, ${v / 1000})`;
+
+            let photonCount = Math.floor(v / 40);
+            let flowCount = Math.floor(v / 25);
+            let flowDur = Math.max(0.2, 2.0 - (v / 500)) + "s";
+
+            document.querySelectorAll('.photon-beam').forEach((beam, index) => { beam.style.opacity = index < photonCount ? 1 : 0; });
+            document.querySelectorAll('.flow-dot').forEach((dot, index) => {
+                dot.style.opacity = index < flowCount ? 1 : 0;
+                dot.style.setProperty('--flow-dur', flowDur);
+            });
+        }
+
+        window.updateL4 = function (v) {
+            let vdisp = document.getElementById('vdisp'); if (vdisp) vdisp.innerText = v + " J";
+            let deltaT = parseFloat(v) / (0.5 * 900); let finalT = 25.0 + deltaT;
+            let out = document.getElementById('lv-output'); if (out) out.innerText = finalT.toFixed(1) + " °C";
+
+            let heatRatio = v / 10000;
+            let metal = document.getElementById('metal-block');
+            if (metal) {
+                let r = Math.floor(30 + (heatRatio * 225)); let g = Math.floor(41 - (heatRatio * 41)); let b = Math.floor(59 - (heatRatio * 59));
+                metal.style.background = `rgb(${r},${g},${b})`;
+            }
+
+            let waveCount = Math.floor(v / 400);
+            document.querySelectorAll('.heat-wave').forEach((wave, index) => { wave.style.opacity = index < waveCount ? 1 : 0; });
+        }
+
+        // --- 3. NEURAL AI ENGINE (FACE YAW/PITCH + HANDS) ---
+        let controlMode = 'manual';
+        let cameraObj = null;
+        let isPinching = false;
+        let currentCmd = 'S';
+
+        const videoElement = document.getElementById('webcam');
+        const handCursor = document.getElementById('ai-cursor');
+        const debugText = document.getElementById('debug-text');
+
+        // ==========================================
+        // SMART KEYBOARD STEERING (Debounced & Conflict-Free)
+        // ==========================================
+        let activeKeyCmd = null;
+
+        window.addEventListener('keydown', (e) => {
+            // Ignore if user is typing in chat, or not in manual mode
+            if (controlMode !== 'manual') return;
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            let pressedCmd = null; let label = '';
+            if (['ArrowUp', 'w', 'W'].includes(e.key)) { pressedCmd = 'F'; label = 'FORWARD'; }
+            else if (['ArrowDown', 's', 'S'].includes(e.key)) { pressedCmd = 'B'; label = 'REVERSE'; }
+            else if (['ArrowLeft', 'a', 'A'].includes(e.key)) { pressedCmd = 'L'; label = 'TURN LEFT'; }
+            else if (['ArrowRight', 'd', 'D'].includes(e.key)) { pressedCmd = 'R'; label = 'TURN RIGHT'; }
+            else if (['q', 'Q'].includes(e.key)) { pressedCmd = 'SL'; label = 'SLIDE LEFT'; }
+            else if (['e', 'E'].includes(e.key)) { pressedCmd = 'SR'; label = 'SLIDE RIGHT'; }
+
+            if (pressedCmd && activeKeyCmd !== pressedCmd) {
+                e.preventDefault(); // Prevent page scrolling
+                activeKeyCmd = pressedCmd;
+                window.sendCmd(pressedCmd, label);
+            } else if (pressedCmd) {
+                e.preventDefault(); // Stop scrolling even if held down
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (controlMode !== 'manual' || document.activeElement.tagName === 'INPUT') return;
+
+            let releasedCmd = null;
+            if (['ArrowUp', 'w', 'W'].includes(e.key)) releasedCmd = 'F';
+            else if (['ArrowDown', 's', 'S'].includes(e.key)) releasedCmd = 'B';
+            else if (['ArrowLeft', 'a', 'A'].includes(e.key)) releasedCmd = 'L';
+            else if (['ArrowRight', 'd', 'D'].includes(e.key)) releasedCmd = 'R';
+            else if (['q', 'Q'].includes(e.key)) releasedCmd = 'SL';
+            else if (['e', 'E'].includes(e.key)) releasedCmd = 'SR';
+
+            // Only stop if the key they released is the one currently driving
+            if (releasedCmd && activeKeyCmd === releasedCmd) {
+                activeKeyCmd = null;
+                window.sendCmd('S', 'STOP');
+            }
+        });
+
+        // Graceful failing if mediapipe didn't load (offline)
+        if (typeof Hands !== 'undefined' && typeof FaceMesh !== 'undefined') {
+            const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+
+            const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.6 });
+
+            // Hands Logic
+            hands.onResults((res) => {
+                if (controlMode === 'face') return;
+
+                if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                    const lm = res.multiHandLandmarks[0];
+                    const indexUp = lm[8].y < lm[6].y; const middleUp = lm[12].y < lm[10].y; const ringUp = lm[16].y < lm[14].y; const pinkyUp = lm[20].y < lm[18].y;
+                    let fingersUp = (indexUp ? 1 : 0) + (middleUp ? 1 : 0) + (ringUp ? 1 : 0) + (pinkyUp ? 1 : 0);
+
+                    const x = (1 - lm[8].x) * window.innerWidth; const y = lm[8].y * window.innerHeight;
+                    const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+                    const thumbOut = pinchDist > 0.15;
+
+                    if (controlMode === 'manual') {
+                        if (fingersUp === 1 && indexUp && !thumbOut) {
+                            if (handCursor) {
+                                handCursor.style.display = "flex";
+                                handCursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                            }
+
+                            if (pinchDist < 0.05) {
+                                if (handCursor) handCursor.classList.add('pinching');
+                                if (!isPinching) {
+                                    isPinching = true;
+                                    const el = document.elementFromPoint(x, y);
+                                    if (el) { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.click(); }
+                                }
+                            } else {
+                                if (handCursor) handCursor.classList.remove('pinching');
+                                if (isPinching) {
+                                    isPinching = false;
+                                    const el = document.elementFromPoint(x, y);
+                                    if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                                }
+                            }
+                        } else {
+                            if (handCursor) handCursor.style.display = "none";
+                            isPinching = false;
+                        }
+                    }
+                    else if (controlMode === 'hands') {
+                        if (handCursor) handCursor.style.display = "none";
+                        if (indexUp && !middleUp && !ringUp && pinkyUp) { window.sendCmd('R', 'TURN RIGHT'); }
+                        else if (indexUp && !middleUp && !ringUp && !pinkyUp && thumbOut) { window.sendCmd('L', 'TURN LEFT'); }
+                        else if (indexUp && middleUp && !ringUp && !pinkyUp) { window.sendCmd('B', 'REVERSE'); }
+                        else if (fingersUp >= 3) { const size = Math.hypot(lm[9].x - lm[0].x, lm[9].y - lm[0].y); if (size > 0.2) window.sendCmd('F', 'FORWARD'); else window.sendCmd('S', 'STOP'); }
+                        else { window.sendCmd('S', 'STOP'); }
+                    }
+                } else {
+                    if (handCursor) handCursor.style.display = "none";
+                    if (controlMode === 'hands') window.sendCmd('S', 'STOP');
+                }
+            });
+
+            // Face Logic
+            faceMesh.onResults((res) => {
+                if (controlMode !== 'face') return;
+                if (handCursor) handCursor.style.display = "none";
+
+                if (res.multiFaceLandmarks && res.multiFaceLandmarks.length > 0) {
+                    const lm = res.multiFaceLandmarks[0];
+                    const faceW = lm[454].x - lm[234].x;
+                    const cheekCenter = (lm[234].x + lm[454].x) / 2;
+                    const yaw = (lm[4].x - cheekCenter) / faceW;
+
+                    const faceH = lm[152].y - lm[10].y;
+                    const vertCenter = (lm[10].y + lm[152].y) / 2;
+                    const pitch = (lm[4].y - vertCenter) / faceH;
+
+                    const YAW_THRESH = 0.12; const PITCH_THRESH = 0.12;
+
+                    const eyeW = Math.hypot(lm[133].x - lm[33].x, lm[133].y - lm[33].y);
+                    const eyeH = Math.hypot(lm[145].x - lm[159].x, lm[145].y - lm[159].y);
+                    const ear = eyeH / eyeW;
+
+                    if (ear < 0.16) { window.sendCmd('S', 'SAFETY BLINK'); if (debugText) debugText.innerText = "EYES CLOSED: STOP"; return; }
+                    if (yaw < -YAW_THRESH) { window.sendCmd('R', 'TURN RIGHT'); if (debugText) debugText.innerText = `JAW TURNED RIGHT: ${yaw.toFixed(2)}`; }
+                    else if (yaw > YAW_THRESH) { window.sendCmd('L', 'TURN LEFT'); if (debugText) debugText.innerText = `JAW TURNED LEFT: ${yaw.toFixed(2)}`; }
+                    else if (pitch < -PITCH_THRESH) { window.sendCmd('F', 'FORWARD'); if (debugText) debugText.innerText = `FACE TILTED UP: ${pitch.toFixed(2)}`; }
+                    else if (pitch > PITCH_THRESH) { window.sendCmd('B', 'REVERSE'); if (debugText) debugText.innerText = `FACE TILTED DOWN: ${pitch.toFixed(2)}`; }
+                    else { window.sendCmd('S', 'STOP'); if (debugText) debugText.innerText = "NEUTRAL FACE"; }
+
+                } else {
+                    window.sendCmd('S', 'STOP');
+                    if (debugText) debugText.innerText = "NO FACE DETECTED";
+                }
+            });
+
+            window.startAI = function () {
+                if (!cameraObj) {
+                    cameraObj = new Camera(videoElement, {
+                        onFrame: async () => {
+                            if (controlMode === 'hands' || controlMode === 'manual') await hands.send({ image: videoElement });
+                            else if (controlMode === 'face') await faceMesh.send({ image: videoElement });
+                        }, width: 320, height: 240
+                    });
+                    cameraObj.start();
+                }
+                const camBtn = document.getElementById('cam-btn');
+                const aiHud = document.getElementById('video-container');
+                if (camBtn) camBtn.style.display = 'none';
+                if (aiHud) {
+                    aiHud.classList.remove('hidden');
+                    aiHud.classList.add('flex');
+                }
+            }
+        } else {
+            window.startAI = function () { alert("AI Camera disabled in Offline Mode."); }
+        }
+
+        window.setMode = function (mode) {
+            if (window.isOfflineMode && mode !== 'manual') {
+                alert("Neural and Kinetic modes require cloud inference and are disabled offline.");
+                return;
+            }
+            controlMode = mode;
+            document.querySelectorAll('.cmd-btn').forEach(b => b.classList.remove('active'));
+            let btn = document.getElementById(`btn-${mode}`);
+            if (btn) btn.classList.add('active');
+
+            const aiStatus = document.getElementById('ai-status-text');
+            const aiInstr = document.getElementById('ai-instructions');
+            const aiHud = document.getElementById('video-container');
+            const camBtn = document.getElementById('cam-btn');
+
+            if (mode === 'manual') {
+                if (aiStatus) aiStatus.innerText = cameraObj ? "MANUAL (WEBCAM CURSOR ACTIVE)" : "MANUAL (KEYBOARD/MOUSE)";
+                if (aiInstr) aiInstr.innerHTML = "Use mouse, touch, or arrow keys to drive.<br>Enable webcam for Index Finger cursor.";
+                if (aiHud && !cameraObj) {
+                    aiHud.classList.add('hidden');
+                    aiHud.classList.remove('flex');
+                }
+                if (camBtn && !cameraObj) camBtn.style.display = 'block';
+                if (handCursor) handCursor.style.display = 'none';
+                if (cameraObj) { cameraObj.stop(); cameraObj = null; }
+            } else {
+                if (aiStatus) aiStatus.innerText = mode === 'hands' ? "KINETIC TRACKING ACTIVE" : "NEURAL FACE TRACKING ACTIVE";
+                if (aiInstr) aiInstr.innerHTML = mode === 'hands' ?
+                    "<span class='text-white font-bold'>1-FINGER:</span> UI Mouse Cursor<br><span class='text-white font-bold'>5-FINGERS:</span> STOP / FORWARD<br><span class='text-white font-bold'>L-SHAPE / ROCK-ON:</span> STEER L/R<br><span class='text-white font-bold'>PEACE SIGN:</span> REVERSE" :
+                    "<span class='text-white font-bold'>TILT HEAD UP/DOWN:</span> FORWARD / REVERSE<br><span class='text-white font-bold'>TURN HEAD L/R:</span> STEER L/R<br><span class='text-white font-bold'>CENTER HEAD:</span> STOP";
+
+                if (handCursor) handCursor.style.display = 'none';
+                if (window.startAI) window.startAI();
+            }
+        }
+
+        window.sendCmd = function (cmd, label) {
+            if (currentCmd !== cmd) {
+                currentCmd = cmd; fetch(`/action?dir=${cmd}`).catch(e => { });
+                const el = document.getElementById('cmd-text');
+                if (el) {
+                    el.innerText = label;
+                    el.style.color = (cmd === 'S' || cmd === 'B' || cmd === 'SAFETY BLINK') ? '#ff007f' : '#ffffff';
+                    el.style.textShadow = (cmd === 'S' || cmd === 'B' || cmd === 'SAFETY BLINK') ? '0 0 30px #ff007f' : '0 0 30px rgba(255,255,255,0.5)';
+                }
+                document.querySelectorAll('.ctrl-btn').forEach(btn => btn.classList.remove('active'));
+                if (cmd === 'F') { let btn = document.querySelector('.up'); if (btn) btn.classList.add('active'); }
+                if (cmd === 'B') { let btn = document.querySelector('.down'); if (btn) btn.classList.add('active'); }
+                if (cmd === 'L') { let btn = document.querySelector('.left'); if (btn) btn.classList.add('active'); }
+                if (cmd === 'R') { let btn = document.querySelector('.right'); if (btn) btn.classList.add('active'); }
+                // Distinct highlighting for Slide buttons
+                if (cmd === 'SL') { let btn = document.querySelector('.slide-left'); if (btn) btn.classList.add('active'); }
+                if (cmd === 'SR') { let btn = document.querySelector('.slide-right'); if (btn) btn.classList.add('active'); }
+                if (cmd === 'S' || cmd === 'SAFETY BLINK') { let btn = document.querySelector('.center'); if (btn) btn.classList.add('active'); }
+            }
+        }
+
+        // --- GRAPH SIMULATION LOGIC & GLOBAL DATA ---
+        let tChart = null; let gChart = null;
+        if (typeof Chart !== 'undefined') {
+            const opt = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9, family: "'Space Mono', monospace" } } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10, family: "'Space Mono', monospace" } } } }, elements: { point: { radius: 0 }, line: { borderWidth: 3, tension: 0.4 } } };
+            tChart = new Chart(document.getElementById('tChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', fill: true }] }, options: opt });
+            gChart = new Chart(document.getElementById('gChart').getContext('2d'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#ffbbed', backgroundColor: 'rgba(255,187,237,0.1)', fill: true }] }, options: opt });
+        }
+
+        setInterval(() => {
+            fetch('/data').then(r => r.json()).then(d => {
+                window.latestTemp = d.t;
+                window.latestGas = d.g;
+                updateCharts(d.t, d.g, d.dht_err, false);
+            }).catch(e => {
+                window.latestTemp = window.latestTemp + (Math.random() * 0.4 - 0.2);
+                window.latestGas = window.latestGas + (Math.random() * 10 - 5);
+                updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true);
+            });
+        }, 1500);
+
+        function updateCharts(t, g, err, isSim) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            if (tChart) {
+                if (tChart.data.labels.length > 20) { tChart.data.labels.shift(); tChart.data.datasets[0].data.shift(); }
+                tChart.data.labels.push(time); tChart.data.datasets[0].data.push(err ? 0 : t); tChart.update();
+            }
+            if (gChart) {
+                if (gChart.data.labels.length > 20) { gChart.data.labels.shift(); gChart.data.datasets[0].data.shift(); }
+                gChart.data.labels.push(time); gChart.data.datasets[0].data.push(g); gChart.update();
+            }
+
+            let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : t.toFixed(1) + "°"; hudT.style.color = (t > 40 && !err) ? "#ef4444" : "#ffffff"; }
+            let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : "45.2%";
+            let hudG = document.getElementById('hud-g'); if (hudG) { hudG.innerText = g; hudG.style.color = g > 1050 ? "#ef4444" : "#ffffff"; }
+
+            const statBox = document.getElementById('hud-status-box');
+            const statText = document.getElementById('hud-status');
+            if (statBox && statText) {
+                if (err || g <= 0 || g >= 1024) {
+                    statBox.style.border = "1px solid rgba(245,158,11,0.5)"; statBox.style.background = "rgba(245,158,11,0.1)";
+                    statText.className = "text-xs lg:text-sm font-bold text-amber-500 tracking-widest mt-1"; statText.innerText = "SENSOR ERROR";
+                } else if (g > 1050 || t > 40) {
+                    statBox.style.border = "1px solid rgba(239,68,68,0.5)"; statBox.style.background = "rgba(239,68,68,0.1)";
+                    statText.className = "text-xs lg:text-sm font-bold text-red-500 animate-pulse tracking-widest mt-1"; statText.innerText = "HAZARD DETECTED";
+                } else {
+                    statBox.style.border = "1px solid rgba(255,255,255,0.05)"; statBox.style.background = "#08080a";
+                    statText.className = "text-xs lg:text-sm font-bold text-green-400 tracking-wider mt-1"; statText.innerText = isSim ? "SYS READY (SIM)" : "ENVIRONMENT SAFE";
+                }
+            }
+        }
+
+        // --- 4. NEURAL OS CHAT & DYNAMIC EXECUTION PROTOCOL ---
+        window.handleChatKey = function (e) {
+            if (e.key === 'Enter') window.sendChatMessage();
+        };
+
+        function addChatLine(sender, text, id = null) {
+            const chatHistory = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            if (id) div.id = id;
+
+            if (sender === 'USER') {
+                div.className = "text-white text-right";
+                div.innerText = "> " + text;
+            } else if (sender === 'SYS') {
+                div.className = "text-yellow-500 animate-pulse";
+                div.innerText = ">> " + text;
+            } else if (sender === 'AUTOPILOT') {
+                div.className = "text-purple-400 font-bold tracking-widest";
+                div.innerText = "[AUTOPILOT] " + text;
+            } else {
+                div.className = "text-cyan-400";
+                div.innerText = "> Neural OS: " + text;
+            }
+
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        window.executeSequence = async function (seq) {
+            const cmdLabels = { 'F': 'FORWARD', 'B': 'REVERSE', 'L': 'TURN LEFT', 'R': 'TURN RIGHT', 'SL': 'SLIDE LEFT', 'SR': 'SLIDE RIGHT', 'S': 'STOP' };
+            for (let step of seq) {
+                let cmd = step.cmd || 'S';
+                let dur = step.dur || 0;
+                let label = cmdLabels[cmd] || 'STOP';
+
+                addChatLine('AUTOPILOT', `Executing: ${label} for ${dur}ms`);
+                window.sendCmd(cmd, label);
+
+                if (dur > 0) await delay(dur);
+            }
+            window.sendCmd('S', 'STOP');
+            addChatLine('AUTOPILOT', `Sequence Complete. Returning to manual control.`);
+        };
+
+        window.sendChatMessage = async function () {
+            const inputEl = document.getElementById('chat-input');
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            inputEl.value = '';
+            addChatLine('USER', text);
+            addChatLine('SYS', 'Establishing secure link to Mainframe...', 'processing-line');
+
+            const apiKey = ""; // <--- Insert API Key Here
+
+            const sysPrompt = `You are Neural OS, the onboard tactical AI for a Hazard Recon Car. 
+            Current Telemetry: Core Temp ${window.latestTemp}°C, Gas Density ${window.latestGas} PPM. Sensor Error: ${window.latestErr ? 'YES' : 'NO'}. 
+            CRITICAL DIRECTIVE: If the user commands a physical maneuver (e.g., "do a 3-point turn", "slide left", "evade right"), you MUST output ONLY a valid JSON array representing the movement sequence. 
+            Format: [{"cmd": "F", "dur": 1000}, {"cmd": "SL", "dur": 500}, {"cmd": "S", "dur": 0}]. 
+            Valid cmds: F (Forward), B (Reverse), L (Turn Left), R (Turn Right), SL (Slide Left), SR (Slide Right), S (Stop). dur = duration in milliseconds. NEVER include markdown or explanatory text if outputting JSON.
+            If the user is just asking a question, answer normally in brief, tactical sci-fi text (max 2 sentences).`;
+
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                systemInstruction: { parts: [{ text: sysPrompt }] }
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                const el = document.getElementById('processing-line');
+                if (el) el.remove();
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const result = await response.json();
+                let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "NO RESPONSE FROM MAINFRAME.";
+                aiText = aiText.trim();
+
+                if (aiText.startsWith('```json')) aiText = aiText.substring(7);
+                if (aiText.startsWith('```')) aiText = aiText.substring(3);
+                if (aiText.endsWith('```')) aiText = aiText.substring(0, aiText.length - 3);
+                aiText = aiText.trim();
+
+                try {
+                    if (aiText.startsWith('[') && aiText.endsWith(']')) {
+                        const sequence = JSON.parse(aiText);
+                        addChatLine('AUTOPILOT', "DYNAMIC SEQUENCE GENERATED. INITIATING OVERRIDE...");
+                        executeSequence(sequence);
+                    } else {
+                        addChatLine('AI', aiText);
+                    }
+                } catch (parseErr) {
+                    addChatLine('AI', aiText);
+                }
+
+            } catch (e) {
+                const el = document.getElementById('processing-line');
+                if (el) el.remove();
+                addChatLine('SYS', 'COMMUNICATION LINK SEVERED. If you are running this locally, please paste your free Google Gemini API Key into the HTML code where it says const apiKey="".');
+            }
+        };
+
+    </script>
+</body>
+
+</html>
