@@ -1,6 +1,6 @@
-/* Hazard Recon — Global Addon (Blynk Version)
-   This script redirects all motor and telemetry calls to the Blynk Cloud API.
-   The "IP" box on the website should now contain your BLYNK_AUTH_TOKEN. */
+/* Hazard Recon — Global Addon (Blynk Version v1.1)
+   - Improved Sensor Parsing (Fixed NaN/Straight Line issue)
+   - Improved Error Handling */
 
 (function () {
   "use strict";
@@ -11,7 +11,6 @@
     return "YourAuthToken";
   }
 
-  // Patch fetch so existing app.html calls are routed to Blynk Cloud
   (function patchFetch() {
     const orig = window.fetch.bind(window);
     window.fetch = function (input, init) {
@@ -19,25 +18,24 @@
         const url = typeof input === "string" ? input : (input && input.url) || "";
         const token = getBlynkToken();
 
-        // 1. REWRITE COMMANDS (/action?dir=F)
         if (url.startsWith("/action")) {
           const dir = new URLSearchParams(url.split('?')[1]).get('dir') || "S";
           const blynkUrl = `https://blynk.cloud/external/api/update?token=${token}&V0=${dir}`;
-          // Use no-cors for fast one-way commands
           return orig(blynkUrl, { mode: "no-cors" });
         }
 
-        // 2. REWRITE TELEMETRY (/data)
         if (url.startsWith("/data")) {
-          // Get V1 (Temp), V2 (Hum), V3 (Gas)
           const blynkUrl = `https://blynk.cloud/external/api/get?token=${token}&V1&V2&V3`;
           return orig(blynkUrl).then(res => res.json()).then(data => {
-            // Convert Blynk response back to Hazard format
+            // Robust parsing: check if data exists and is not null
+            const t = data.hasOwnProperty('V1') ? parseFloat(data.V1) : null;
+            const g = data.hasOwnProperty('V3') ? parseInt(data.V3) : null;
+            
             return new Response(JSON.stringify({
-              t: parseFloat(data.V1) || 0,
-              h: parseFloat(data.V2) || 0,
-              g: parseInt(data.V3) || 0,
-              dht_err: !data.V1
+              t: t !== null ? t : 0,
+              h: data.V2 || 0,
+              g: g !== null ? g : 0,
+              dht_err: t === null // Only error if V1 is actually missing
             }), { headers: { 'Content-Type': 'application/json' } });
           });
         }
@@ -46,5 +44,5 @@
     };
   })();
 
-  console.log("🚀 Neural OS: Global Blynk Link Active");
+  console.log("🚀 Neural OS: Global v1.1 Active (Sensors Fixed)");
 })();

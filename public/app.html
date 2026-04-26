@@ -1574,30 +1574,26 @@
                     const thumbOut = pinchDist > 0.15;
 
                     if (controlMode === 'manual') {
-                        if (fingersUp === 1 && indexUp && !thumbOut) {
-                            if (handCursor) {
-                                handCursor.style.display = "flex";
-                                handCursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-                            }
+                        // Show cursor whenever ANY hand is detected in manual mode
+                        if (handCursor) {
+                            handCursor.style.display = "flex";
+                            handCursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                        }
 
-                            if (pinchDist < 0.05) {
-                                if (handCursor) handCursor.classList.add('pinching');
-                                if (!isPinching) {
-                                    isPinching = true;
-                                    const el = document.elementFromPoint(x, y);
-                                    if (el) { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.click(); }
-                                }
-                            } else {
-                                if (handCursor) handCursor.classList.remove('pinching');
-                                if (isPinching) {
-                                    isPinching = false;
-                                    const el = document.elementFromPoint(x, y);
-                                    if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-                                }
+                        if (fingersUp === 1 && indexUp && pinchDist < 0.05) {
+                            if (handCursor) handCursor.classList.add('pinching');
+                            if (!isPinching) {
+                                isPinching = true;
+                                const el = document.elementFromPoint(x, y);
+                                if (el) { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.click(); }
                             }
                         } else {
-                            if (handCursor) handCursor.style.display = "none";
-                            isPinching = false;
+                            if (handCursor) handCursor.classList.remove('pinching');
+                            if (isPinching) {
+                                isPinching = false;
+                                const el = document.elementFromPoint(x, y);
+                                if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                            }
                         }
                     }
                     else if (controlMode === 'hands') {
