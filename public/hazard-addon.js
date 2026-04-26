@@ -71,6 +71,38 @@
     #hz-panel { padding: 10px 12px; width: 260px; }
     #hz-panel .hz-row { padding: 3px 0; font-size: 10px; }
   }
+
+  /* Settings (IP) modal */
+  #hz-ipbtn { margin-left: 6px; background: rgba(8,10,22,0.6); border: 1px solid rgba(255,43,214,0.4);
+    color: #ff2bd6; border-radius: 999px; padding: 6px 10px; font-size: 10px; cursor: pointer;
+    letter-spacing: .14em; text-transform: uppercase; font-family: inherit; line-height: 1;
+    backdrop-filter: blur(12px); transition: all .15s; }
+  #hz-ipbtn:hover { box-shadow: 0 0 14px rgba(255,43,214,.4); }
+  #hz-modal-bg { position: fixed; inset: 0; background: rgba(2,4,12,.78); backdrop-filter: blur(8px);
+    z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
+  #hz-modal-bg.open { display: flex; }
+  #hz-modal { width: 100%; max-width: 440px; background: rgba(8,10,22,.92);
+    border: 1px solid rgba(0,240,255,.35); border-radius: 16px; padding: 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 40px rgba(0,240,255,.2);
+    font-family: 'Space Mono', ui-monospace, monospace; color: #d6f6ff; }
+  #hz-modal h3 { margin:0 0 6px; font-family:'Syncopate', sans-serif; font-size: 14px;
+    letter-spacing:.2em; color:#00f0ff; text-transform:uppercase; }
+  #hz-modal p { margin: 0 0 14px; font-size: 11px; color: #7a8aa3; line-height: 1.5; }
+  #hz-modal label { display:block; font-size: 9px; letter-spacing: .14em; color:#7a8aa3;
+    text-transform: uppercase; margin-bottom: 6px; }
+  #hz-modal input { width: 100%; background: rgba(0,0,0,.5); border: 1px solid rgba(0,240,255,.3);
+    color: #fff; padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 13px;
+    outline: none; transition: border-color .15s, box-shadow .15s; }
+  #hz-modal input:focus { border-color: #00f0ff; box-shadow: 0 0 12px rgba(0,240,255,.3); }
+  #hz-modal .hz-modal-actions { display:flex; gap: 8px; margin-top: 16px; }
+  #hz-modal button { flex: 1; padding: 10px; border-radius: 8px; font-family: inherit;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+    background: transparent; border: 1px solid rgba(0,240,255,.4); color: #00f0ff;
+    transition: all .15s; }
+  #hz-modal button.primary { background: linear-gradient(135deg, #00f0ff, #ff2bd6); color:#000;
+    border-color: transparent; font-weight: 700; }
+  #hz-modal button:hover { box-shadow: 0 0 14px rgba(0,240,255,.4); }
+  #hz-modal small { display:block; margin-top: 8px; font-size: 9px; color:#5a6b85; letter-spacing:.06em; }
   `;
 
   function $(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
