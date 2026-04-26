@@ -1526,8 +1526,6 @@
             else if (['ArrowDown', 's', 'S'].includes(e.key)) { pressedCmd = 'B'; label = 'REVERSE'; }
             else if (['ArrowLeft', 'a', 'A'].includes(e.key)) { pressedCmd = 'L'; label = 'TURN LEFT'; }
             else if (['ArrowRight', 'd', 'D'].includes(e.key)) { pressedCmd = 'R'; label = 'TURN RIGHT'; }
-            else if (['q', 'Q'].includes(e.key)) { pressedCmd = 'SL'; label = 'SLIDE LEFT'; }
-            else if (['e', 'E'].includes(e.key)) { pressedCmd = 'SR'; label = 'SLIDE RIGHT'; }
 
             if (pressedCmd && activeKeyCmd !== pressedCmd) {
                 e.preventDefault(); // Prevent page scrolling
