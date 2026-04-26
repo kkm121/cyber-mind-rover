@@ -1850,37 +1850,46 @@
             addChatLine('USER', text);
             addChatLine('SYS', 'Establishing secure link to Mainframe...', 'processing-line');
 
-            const apiKey = ""; // <--- Insert API Key Here
-
-            const sysPrompt = `You are Neural OS, the onboard tactical AI for a Hazard Recon Car. 
-            Current Telemetry: Core Temp ${window.latestTemp}°C, Gas Density ${window.latestGas} PPM. Sensor Error: ${window.latestErr ? 'YES' : 'NO'}. 
-            CRITICAL DIRECTIVE: If the user commands a physical maneuver (e.g., "do a 3-point turn", "slide left", "evade right"), you MUST output ONLY a valid JSON array representing the movement sequence. 
-            Format: [{"cmd": "F", "dur": 1000}, {"cmd": "SL", "dur": 500}, {"cmd": "S", "dur": 0}]. 
-            Valid cmds: F (Forward), B (Reverse), L (Turn Left), R (Turn Right), SL (Slide Left), SR (Slide Right), S (Stop). dur = duration in milliseconds. NEVER include markdown or explanatory text if outputting JSON.
-            If the user is just asking a question, answer normally in brief, tactical sci-fi text (max 2 sentences).`;
-
-            const payload = {
-                contents: [{ parts: [{ text: text }] }],
-                systemInstruction: { parts: [{ text: sysPrompt }] }
-            };
+            // Lovable AI Gateway (proxied via Edge Function — no client API key needed)
+            const SUPABASE_URL = "https://roqrldfcfkczxxhpoztv.supabase.co";
+            const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvcXJsZGZjZmtjenh4aHBvenR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNzEyODMsImV4cCI6MjA5Mjc0NzI4M30.bGkrgFeNGR9EPJqqMnCQU00qTY8l4-P9LFNMd7mcvWo";
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/neural-chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON}`,
+                        'apikey': SUPABASE_ANON,
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        telemetry: {
+                            t: window.latestTemp,
+                            h: window.latestHum,
+                            g: window.latestGas,
+                            dht_err: !!window.latestErr,
+                        },
+                    }),
+                });
 
                 const el = document.getElementById('processing-line');
                 if (el) el.remove();
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json().catch(() => ({}));
 
-                const result = await response.json();
-                let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "NO RESPONSE FROM MAINFRAME.";
-                aiText = aiText.trim();
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        addChatLine('SYS', 'MAINFRAME OVERLOADED — too many requests. Stand by.');
+                    } else if (response.status === 402) {
+                        addChatLine('SYS', 'AI CREDITS EXHAUSTED. Top up in Workspace → Usage.');
+                    } else {
+                        addChatLine('SYS', result.error || `LINK ERROR (${response.status})`);
+                    }
+                    return;
+                }
 
-                if (aiText.startsWith('```json')) aiText = aiText.substring(7);
-                if (aiText.startsWith('```')) aiText = aiText.substring(3);
-                if (aiText.endsWith('```')) aiText = aiText.substring(0, aiText.length - 3);
-                aiText = aiText.trim();
+                let aiText = (result.reply || "NO RESPONSE FROM MAINFRAME.").trim();
 
                 try {
                     if (aiText.startsWith('[') && aiText.endsWith(']')) {
@@ -1897,7 +1906,7 @@
             } catch (e) {
                 const el = document.getElementById('processing-line');
                 if (el) el.remove();
-                addChatLine('SYS', 'COMMUNICATION LINK SEVERED. If you are running this locally, please paste your free Google Gemini API Key into the HTML code where it says const apiKey="".');
+                addChatLine('SYS', 'COMMUNICATION LINK SEVERED. Check your network connection.');
             }
         };
 
