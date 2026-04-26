@@ -185,14 +185,15 @@
     <div id="hz-modal-bg" role="dialog" aria-modal="true" aria-labelledby="hz-modal-title">
       <div id="hz-modal">
         <h3 id="hz-modal-title">Car Connection</h3>
-        <p>Enter the local IP address of your Hazard Recon Car. The dashboard will route all hardware requests (/data, /cmd, etc.) through this address.</p>
-        <label for="hz-modal-input">Car Local IP Address</label>
-        <input id="hz-modal-input" type="text" placeholder="http://192.168.43.50" autocomplete="off" spellcheck="false" />
+        <p>Default address is <code style="color:#00f0ff">http://hazardrecon.local</code> — your car must be on the same Wi-Fi network and advertising mDNS as <code>hazardrecon.local</code>. Override with a raw IP only if mDNS isn't working.</p>
+        <label for="hz-modal-input">Car Address (mDNS or IP)</label>
+        <input id="hz-modal-input" type="text" placeholder="http://hazardrecon.local" autocomplete="off" spellcheck="false" />
         <div class="hz-modal-actions">
           <button id="hz-modal-cancel" type="button">Cancel</button>
+          <button id="hz-modal-reset" type="button">Reset Default</button>
           <button id="hz-modal-save" type="button" class="primary">Save & Connect</button>
         </div>
-        <small>Tip: include the protocol, e.g. <code>http://192.168.1.42</code>. Stored locally in your browser.</small>
+        <small>The car firmware must send <code>Access-Control-Allow-Origin: *</code> on its responses so this dashboard can read them cross-origin.</small>
       </div>
     </div>
   `);
