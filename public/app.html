@@ -1773,23 +1773,16 @@
                 const latency = Math.round(performance.now() - start);
                 const isActuallyOnline = d.is_online !== false; 
 
-                if (!isActuallyOnline) {
-                    // Car is off, trigger simulation
-                    window.latestTemp = (window.latestTemp || 25) + (Math.random() * 0.4 - 0.2);
-                    window.latestHum = (window.latestHum || 50) + (Math.random() * 2 - 1);
-                    window.latestGas = (window.latestGas || 300) + (Math.random() * 10 - 5);
-                    updateCharts(window.latestTemp, window.latestHum, window.latestGas, false, true, 0, -100);
-                } else {
-                    window.latestTemp = d.t;
-                    window.latestHum = d.h;
-                    window.latestGas = d.g;
-                    updateCharts(d.t, d.h, d.g, d.dht_err, false, latency, d.rssi);
-                }
+                window.latestTemp = d.t;
+                window.latestHum = d.h;
+                window.latestGas = d.g;
+                
+                // Show cloud data with jitter, even if offline
+                updateCharts(d.t, d.h, d.g, d.dht_err, !isActuallyOnline, latency, d.rssi);
+
             }).catch(e => {
-                window.latestTemp = (window.latestTemp || 25) + (Math.random() * 0.4 - 0.2);
-                window.latestHum = (window.latestHum || 50) + (Math.random() * 2 - 1);
-                window.latestGas = (window.latestGas || 300) + (Math.random() * 10 - 5);
-                updateCharts(window.latestTemp, window.latestHum, window.latestGas, false, true, 0, -100);
+                // Network failure
+                updateCharts(window.latestTemp || 0, window.latestHum || 0, window.latestGas || 0, false, true, 0, -100);
             });
         }, 1500);
 
@@ -1836,7 +1829,7 @@
             if (statBox && statText) {
                 if (isSim) {
                     statBox.style.border = "1px solid rgba(0,212,255,0.5)"; statBox.style.background = "rgba(0,212,255,0.1)";
-                    statText.className = "text-xs font-bold text-cyan-400 tracking-widest mt-1"; statText.innerText = "SIMULATION ACTIVE";
+                    statText.className = "text-xs font-bold text-cyan-400 tracking-widest mt-1"; statText.innerText = "📡 CLOUD STANDBY (LAST DATA)";
                 } else if (err || g <= 0) {
                     statBox.style.border = "1px solid rgba(245,158,11,0.5)"; statBox.style.background = "rgba(245,158,11,0.1)";
                     statText.className = "text-xs font-bold text-amber-500 tracking-widest mt-1"; statText.innerText = "SENSOR ERROR";
