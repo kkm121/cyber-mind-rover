@@ -1611,11 +1611,17 @@
                         }
                     }
                     else if (controlMode === 'hands') {
-                        if (handCursor) handCursor.style.display = "none";
+                        if (handCursor) handCursor.style.display = "none"; 
+                        
+                        // Reference gestures for navigation
                         if (indexUp && !middleUp && !ringUp && pinkyUp) { window.sendCmd('R', 'TURN RIGHT'); }
                         else if (indexUp && !middleUp && !ringUp && !pinkyUp && thumbOut) { window.sendCmd('L', 'TURN LEFT'); }
-                        else if (indexUp && middleUp && !ringUp && !pinkyUp) { window.sendCmd('B', 'REVERSE'); }
-                        else if (fingersUp >= 3) { const size = Math.hypot(lm[9].x - lm[0].x, lm[9].y - lm[0].y); if (size > 0.2) window.sendCmd('F', 'FORWARD'); else window.sendCmd('S', 'STOP'); }
+                        else if (indexUp && middleUp && !ringUp && !pinkyUp) { window.sendCmd('B', 'REVERSE'); } // Peace Sign
+                        else if (fingersUp >= 3) { 
+                            const size = Math.hypot(lm[9].x - lm[0].x, lm[9].y - lm[0].y); 
+                            if(size > 0.2) window.sendCmd('F', 'FORWARD'); 
+                            else window.sendCmd('S', 'STOP'); 
+                        }
                         else { window.sendCmd('S', 'STOP'); }
                     }
                 } else {
