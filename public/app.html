@@ -1708,7 +1708,16 @@
 
         window.sendCmd = function (cmd, label) {
             if (currentCmd !== cmd) {
-                currentCmd = cmd; fetch(`/action?dir=${cmd}`).catch(e => { });
+                currentCmd = cmd;
+                // === BLYNK CLOUD COMMAND DISPATCH (V0) ===
+                const token = localStorage.getItem('carIp') || '';
+                if (!token) {
+                    console.warn('[Blynk] No auth token configured. Open the ⚙ Token panel to connect.');
+                } else {
+                    const url = `https://blynk.cloud/external/api/update?token=${encodeURIComponent(token)}&V0=${encodeURIComponent(cmd)}`;
+                    // no-cors keeps commands fast (opaque response is fine — Blynk accepts simple GETs)
+                    fetch(url, { mode: 'no-cors', cache: 'no-store' }).catch(() => { });
+                }
                 const el = document.getElementById('cmd-text');
                 if (el) {
                     el.innerText = label;
