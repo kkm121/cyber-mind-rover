@@ -25,17 +25,18 @@
         }
 
         if (url.startsWith("/data")) {
-          const blynkUrl = `https://blynk.cloud/external/api/get?token=${token}&V1&V2&V3`;
+          const blynkUrl = `https://blynk.cloud/external/api/get?token=${token}&V1&V2&V3&V4`;
           return orig(blynkUrl).then(res => res.json()).then(data => {
-            // Robust parsing: check if data exists and is not null
             const t = data.hasOwnProperty('V1') ? parseFloat(data.V1) : null;
             const g = data.hasOwnProperty('V3') ? parseInt(data.V3) : null;
+            const s = data.hasOwnProperty('V4') ? parseInt(data.V4) : -100;
             
             return new Response(JSON.stringify({
               t: t !== null ? t : 0,
               h: data.V2 || 0,
               g: g !== null ? g : 0,
-              dht_err: t === null // Only error if V1 is actually missing
+              rssi: s,
+              dht_err: t === null
             }), { headers: { 'Content-Type': 'application/json' } });
           });
         }

@@ -874,6 +874,12 @@
                     <div class="badge" id="mq-badge">
                         <div class="badge-dot"></div> MQ: WAITING
                     </div>
+                    <div class="badge" id="latency-badge" style="border-color: #00d4ff;">
+                        <div class="badge-dot" style="background: #00d4ff; box-shadow: 0 0 15px #00d4ff;"></div> PING: --ms
+                    </div>
+                    <div class="badge" id="signal-badge" style="border-color: #ff007f;">
+                        <div class="badge-dot" style="background: #ff007f; box-shadow: 0 0 15px #ff007f;"></div> SIGNAL: --%
+                    </div>
                 </div>
                 <div><button onclick="navTo(3)" class="cmd-btn">OPEN COMMAND CENTER</button></div>
             </div>
@@ -1763,19 +1769,31 @@
         }
 
         setInterval(() => {
+            const start = performance.now();
             fetch('/data').then(r => r.json()).then(d => {
+                const latency = Math.round(performance.now() - start);
                 window.latestTemp = d.t;
                 window.latestGas = d.g;
-                updateCharts(d.t, d.g, d.dht_err, false);
+                updateCharts(d.t, d.g, d.dht_err, false, latency, d.rssi);
             }).catch(e => {
                 window.latestTemp = window.latestTemp + (Math.random() * 0.4 - 0.2);
                 window.latestGas = window.latestGas + (Math.random() * 10 - 5);
-                updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true);
+                updateCharts(parseFloat(window.latestTemp.toFixed(1)), Math.floor(window.latestGas), false, true, 0, -100);
             });
         }, 1500);
 
-        function updateCharts(t, g, err, isSim) {
+        function updateCharts(t, g, err, isSim, latency, rssi) {
             const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // Update Badges
+            const lBadge = document.getElementById('latency-badge');
+            if (lBadge) lBadge.innerHTML = `<div class="badge-dot" style="background: ${latency < 200 ? '#10b981' : '#f59e0b'}; box-shadow: 0 0 15px ${latency < 200 ? '#10b981' : '#f59e0b'};"></div> PING: ${latency}ms`;
+            
+            const sBadge = document.getElementById('signal-badge');
+            if (sBadge && rssi !== undefined) {
+                const signalPercent = Math.min(Math.max(2 * (rssi + 100), 0), 100);
+                sBadge.innerHTML = `<div class="badge-dot" style="background: ${signalPercent > 50 ? '#10b981' : '#ef4444'}; box-shadow: 0 0 15px ${signalPercent > 50 ? '#10b981' : '#ef4444'};"></div> SIGNAL: ${signalPercent}%`;
+            }
 
             if (tChart) {
                 if (tChart.data.labels.length > 20) { tChart.data.labels.shift(); tChart.data.datasets[0].data.shift(); }
