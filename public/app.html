@@ -1796,12 +1796,12 @@
             const dBadge = document.getElementById('dht-badge');
             if (dBadge) {
                 if (err) dBadge.innerHTML = `<div class="badge-dot" style="background: #ef4444; box-shadow: 0 0 15px #ef4444;"></div> DHT: ERROR`;
-                else dBadge.innerHTML = `<div class="badge-dot"></div> DHT: ONLINE`;
+                else dBadge.innerHTML = `<div class="badge-dot"></div> DHT: ONLINE ${jt.toFixed(1)}\u00B0`;
             }
 
             const mBadge = document.getElementById('mq-badge');
             if (mBadge) {
-                if (g > 0) mBadge.innerHTML = `<div class="badge-dot"></div> MQ9: ONLINE`;
+                if (g > 0) mBadge.innerHTML = `<div class="badge-dot"></div> MQ9: ONLINE ${jg}`;
                 else mBadge.innerHTML = `<div class="badge-dot" style="background: #f59e0b; box-shadow: 0 0 15px #f59e0b;"></div> MQ9: WAITING`;
             }
 
@@ -1814,7 +1814,7 @@
                 gChart.data.labels.push(time); gChart.data.datasets[0].data.push(jg); gChart.update('none');
             }
 
-            let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : jt.toFixed(1) + "°"; hudT.style.color = (jt > 40 && !err) ? "#ef4444" : "#ffffff"; }
+            let hudT = document.getElementById('hud-t'); if (hudT) { hudT.innerText = err ? "ERR" : jt.toFixed(1) + "\u00B0"; hudT.style.color = (jt > 40 && !err) ? "#ef4444" : "#ffffff"; }
             let hudH = document.getElementById('hud-h'); if (hudH) hudH.innerText = err ? "ERR" : Math.round(jh) + "%";
             let hudG = document.getElementById('hud-g'); if (hudG) { hudG.innerText = jg; hudG.style.color = jg > 1050 ? "#ef4444" : "#ffffff"; }
 
@@ -1948,7 +1948,7 @@
         };
 
     </script>
-<script src="/hazard-addon.js" defer></script>
+
 </body>
 
 </html>
